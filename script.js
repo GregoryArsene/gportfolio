@@ -1,12 +1,14 @@
-document.addEventListener("DOMContentLoaded", function () {
+gsap.registerPlugin(ScrollTrigger);
+
+document.addEventListener('DOMContentLoaded', function () {
   // Initialisation de Lenis Scroll
   const lenis = new Lenis({
     lerp: 0.1,
-    orientation: "vertical",
-    wheelMultiplier: 0.8,
+    orientation: 'vertical',
+    wheelMultiplier: 1.2,
   });
 
-  lenis.on("scroll", (e) => {
+  lenis.on('scroll', (e) => {
     // Affichage de l'objet de l'événement de défilement pour le débogage
     console.log(e);
   });
@@ -18,24 +20,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Démarre la boucle d'animation pour Lenis
   requestAnimationFrame(raf);
-  // Fin de Lenis Scroll
 
-  // Page Loader
+  // Page loader
   function hideLoader() {
-    var loader = document.querySelector(".page-loader");
+    var loader = document.querySelector('.page-loader');
     if (loader) {
-      loader.style.display = "none";
+      loader.style.display = 'none';
     }
   }
 
   window.addEventListener(
-    "load",
+    'load',
     function () {
       var loaderTimeline = gsap.timeline();
       var animationDuration = 1;
 
       // Loader State
-      var loaderState = document.querySelector(".page-loader_state");
+      var loaderState = document.querySelector('.page-loader_state');
       if (loaderState) {
         var counter = 0;
         var updateLoaderState = function () {
@@ -44,13 +45,12 @@ document.addEventListener("DOMContentLoaded", function () {
           if (counter <= 100) {
             requestAnimationFrame(updateLoaderState);
           } else {
-            loaderTimeline.to(".page-loader", {
+            loaderTimeline.to('.page-loader', {
               duration: animationDuration,
-              y: "-100%",
-              ease: "expo.inOut",
+              y: '-100%',
+              ease: 'expo.inOut',
               delay: 0.3,
             });
-
             loaderTimeline.add(function () {
               hideLoader();
             });
@@ -59,13 +59,14 @@ document.addEventListener("DOMContentLoaded", function () {
         requestAnimationFrame(updateLoaderState);
       }
     },
-    { once: true },
+    { once: true }
   );
 
   // Initialisation des éléments et variables
-  const menu = document.querySelector(".menu");
-  const navElement = document.querySelector(".nav");
-  const menuTrigger = document.querySelector(".menu-trigger");
+  const menu = document.querySelector('.menu');
+  const headerElement = document.querySelector('.header');
+  const menuTrigger = document.querySelector('.menu-trigger');
+  const navLogoContainer = document.querySelector('.nav-logo-container'); // Sélectionner l'élément du logo
 
   // Fonctions pour ouvrir et fermer le menu
   let isMenuOpen = false;
@@ -75,67 +76,54 @@ document.addEventListener("DOMContentLoaded", function () {
   function openMenu() {
     if (!isMenuOpen && !isAnimating) {
       isAnimating = true;
-      navElement.style.mixBlendMode = "normal";
-
-      // Désactiver le défilement
-      document.body.classList.add("no-scroll");
+      headerElement.style.mixBlendMode = 'normal';
 
       // Menu Trigger Text Animation [Start]
-      gsap.to(".menu-trigger_text", {
-        y: "-100%",
-        duration: 0.4,
-        delay: 0.2,
-        ease: "power1.inOut",
+      gsap.to('.menu-trigger_text', {
+        y: '-100%',
+        duration: 0.5,
+        delay: 0,
+        ease: 'power1.inOut',
       });
-
       gsap.to(menu, {
-        y: "0%",
+        y: '0%',
         duration: 1,
-        ease: "power4.inOut",
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+        display: 'flex',
         onComplete: () => {
           isAnimating = false;
         },
       });
 
       // Menu Link Title
-      let typeSplitMenuLinkTitle = new SplitType(".menu-link_title", {
-        types: "lines, words, chars",
+      let typeSplitMenuLinkTitle = new SplitType('.menu-link_title', {
+        types: 'lines, words, chars',
       });
-
-      gsap.from(".menu-link_title .line", {
-        y: "200%",
-        duration: 1.5,
-        ease: "power4.out",
+      gsap.from('.menu-link_title .line', {
+        y: '200%',
+        duration: 1,
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
         stagger: 0.1,
-        delay: 0.4,
+        delay: 0.2,
       });
-
-      // Menu Link Num
-      let typeSplitMenuNum = new SplitType(".menu-link_num", {
-        types: "lines, words, chars",
-      });
-
-      gsap.from(".menu-link_num .line", {
-        y: "400%",
-        duration: 1.5,
-        ease: "power4.out",
-        stagger: 0.1,
-        delay: 0.4,
+      gsap.from('.menu-img', {
+        scale: 1.5,
+        duration: 1.8,
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
       });
 
       // Menu Social Link
-      let typeSplitMenuSocialLink = new SplitType(".menu-social-link_title", {
-        types: "lines, words, chars",
-        tagName: "span",
+      let typeSplitMenuSocialLink = new SplitType('.menu-social_link-title', {
+        types: 'lines, words, chars',
+        tagName: 'span',
       });
-
-      gsap.from(".menu-social-link_title .word", {
-        y: "200%",
+      gsap.from('.menu-social_link-title .word', {
+        y: '200%',
         opacity: 1,
-        duration: 1.5,
-        ease: "power4.out",
+        duration: 1,
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
         stagger: 0.1,
-        delay: 0.5,
+        delay: 0.3,
       });
 
       isMenuOpen = true;
@@ -146,27 +134,24 @@ document.addEventListener("DOMContentLoaded", function () {
   function closeMenu() {
     if (isMenuOpen && !isAnimating) {
       isAnimating = true;
-
       gsap.to(menu, {
-        y: "-100%",
+        y: '-100%',
         duration: 1,
-        ease: "power4.inOut",
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+        display: 'none',
         onComplete: () => {
-          navElement.style.mixBlendMode = "";
+          headerElement.style.mixBlendMode = '';
           isAnimating = false;
         },
       });
 
       // Menu Trigger Text Animation [End]
-      gsap.to(".menu-trigger_text", {
-        y: "0%",
+      gsap.to('.menu-trigger_text', {
+        y: '0%',
         duration: 0.4,
-        delay: 0.2,
-        ease: "power1.inOut",
+        delay: 0.3,
+        ease: 'power1.inOut',
       });
-
-      // Réactiver le défilement
-      document.body.classList.remove("no-scroll");
 
       isMenuOpen = false;
     }
@@ -174,8 +159,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Fonction pour appliquer l'opacité réduite aux autres liens du menu lorsqu'un lien est survolé
   function handleMenuLinkHover() {
-    const menuLinks = document.querySelectorAll(".menu-link");
-
+    const menuLinks = document.querySelectorAll('.menu-link');
     menuLinks.forEach((link) => {
       if (link !== this) {
         gsap.to(link, { opacity: 0.3, duration: 0.3 });
@@ -185,23 +169,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Fonction pour restaurer l'opacité normale des autres liens du menu
   function handleMenuLinkLeave() {
-    const menuLinks = document.querySelectorAll(".menu-link");
-
+    const menuLinks = document.querySelectorAll('.menu-link');
     menuLinks.forEach((link) => {
       gsap.to(link, { opacity: 1, duration: 0.3 });
     });
   }
 
   // Ajouter des écouteurs d'événements pour gérer le survol des liens du menu
-  const menuLinks = document.querySelectorAll(".menu-link");
-
+  const menuLinks = document.querySelectorAll('.menu-link');
   menuLinks.forEach((link) => {
-    link.addEventListener("mouseenter", handleMenuLinkHover);
-    link.addEventListener("mouseleave", handleMenuLinkLeave);
+    link.addEventListener('mouseenter', handleMenuLinkHover);
+    link.addEventListener('mouseleave', handleMenuLinkLeave);
   });
 
   // Écouteur d'événement pour le bouton de déclenchement du menu
-  menuTrigger.addEventListener("click", () => {
+  menuTrigger.addEventListener('click', () => {
     if (isMenuOpen) {
       closeMenu();
     } else {
@@ -209,258 +191,215 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  document.querySelectorAll(".menu a").forEach((el) => {
-    el.addEventListener("click", closeMenu);
+  // Écouteur d'événement pour les liens du menu (sauf le logo)
+  document
+    .querySelectorAll('.menu a:not(.nav-logo-container a)')
+    .forEach((el) => {
+      el.addEventListener('click', closeMenu);
+    });
+
+  // Écouteur d'événement pour le logo (pour fermer le menu lors du clic)
+  navLogoContainer.addEventListener('click', () => {
+    if (isMenuOpen) {
+      closeMenu();
+    }
+  });
+
+  document.querySelectorAll('.menu a').forEach((el) => {
+    el.addEventListener('click', closeMenu);
   });
 
   // Initialise les animations !IMPORTANT
+  initLineLeftText();
+  initRightText();
+  initLinesText();
   initMenuLinkOpacity();
-  initProjectImageScrollAnimation();
-  initWorkHeroTitleAnimation();
-  initProjectHeaderImageScrollAnimation();
-  initPlaygroundAnimation();
-  iniShuffleLine();
-  initAccordion();
-  initHomeHeroLogo();
+  initWorkItem();
+  initWorkPageHero();
 });
 
-//Home Hero Logo
-function initHomeHeroLogo() {
-  // Sélection des éléments à animer
-  const letter = document.querySelector(".home-hero_logo-letter");
-  const circle = document.querySelector(".home-hero_logo-circle");
+// Variables globales
+let animationPlayed = false;
+let splitElements = [];
 
-  const duration = 1.2;
-  const delayBetweenElements = 0.1;
-
-  gsap.to(letter, {
-    duration: duration,
-    y: "0%",
-    ease: "expo.out",
-  });
-
-  gsap.to(circle, {
-    duration: duration,
-    y: "0%",
-    ease: "expo.out",
-    delay: delayBetweenElements,
-  });
-}
-
-//Opacity Project Item / Menu Link
-function initMenuLinkOpacity() {
-  var projectItems = $(".project-item");
-  var menuLinks = $(".menu-link");
-
-  projectItems.on("mouseenter", function () {
-    var otherItems = projectItems.not(this);
-    gsap.to(otherItems, {
-      filter: "grayscale(100%)",
-      duration: 0.4,
-      ease: "power1.out",
-    });
-  });
-
-  projectItems.on("mouseleave", function () {
-    gsap.to(projectItems, {
-      filter: "grayscale(0%)",
-      duration: 0.4,
-      ease: "power1.out",
-    });
-  });
-}
-
-//Home - Project Item Image Animation
-function initProjectImageScrollAnimation() {
-  const images = document.querySelectorAll(".project-img_background");
-
-  images.forEach((img) => {
-    gsap.from(img, {
-      y: "-29%",
-      scrollTrigger: {
-        trigger: img,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0.1,
-        ease: "none",
-      },
-    });
-  });
-}
-
-// Project - Title Animation
-function initWorkHeroTitleAnimation() {
-  if (window.innerWidth > 768 && document.querySelector(".project-title")) {
-    let typeSplit = new SplitType(".project-title", {
-      types: "lines, words, chars",
-      tagName: "span",
-    });
-
-    gsap.from(".project-title .line", {
-      y: "250%",
-      duration: 1.2,
-      ease: "power4.out",
-      delay: 0.3,
-      rotation: 10,
-      skewY: 15,
-    });
+// Écoutez l'événement 'barbaAfterEnter'
+barba.hooks.afterEnter(() => {
+  if (!animationPlayed) {
+    initLineLeftText();
+    initRightText();
+    initLinesText();
+    animationPlayed = true;
   }
-}
+});
 
-//Project Header Image Animation
-function initProjectHeaderImageScrollAnimation() {
-  const images = document.querySelectorAll(".project-header-img");
-
-  images.forEach((img) => {
-    gsap.from(img, {
-      y: "-29%",
-      scrollTrigger: {
-        trigger: img,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0.1,
-        ease: "none",
-      },
-    });
-  });
-}
-
-// Playground Animation
-function initPlaygroundAnimation() {
-  // Vérifier si la largeur de la fenêtre est supérieure à 768px
-  if (window.innerWidth > 768) {
-    const playgroundRowItems = document.querySelectorAll(
-      ".playground-list-item",
-    );
-
-    playgroundRowItems.forEach((rowItem) => {
-      const title = rowItem.querySelector(".playground-item-title");
-      const category = rowItem.querySelector(".playground-list-category");
-
-      gsap.from([title, category], {
-        y: "100%",
-        stagger: 0.1, // Ajouter un léger délai entre les éléments
-        scrollTrigger: {
-          trigger: rowItem,
-          start: "50% 50%",
-          ease: "ease.out",
-        },
-      });
-    });
-  }
-}
-
-//Shuffle Line
-function iniShuffleLine() {
-  const elements = [
-    // [Work] Ghibli Header
-    { selector: "#num-ghibli-project", text: "1P", delay: 0.3 },
-    {
-      selector: "#label-ghibli-project",
-      text: "JEEAPASN MNOIITAN OSATUIM",
-      delay: 0.3,
-    },
-    { selector: "#date-ghibli-project", text: "3022", delay: 0.4 },
-
-    // Playground Header
-    {
-      selector: "#header-label-playground",
-      text: "CTYERATIVDME OEREFOD",
-      delay: 0.4,
-    },
-    { selector: "#header-info-playground", text: "31-12" },
-
-    // About Header
-    { selector: "#header-label-about", text: "egrg", delay: 0.4 },
-    { selector: "#header-info-about", text: "32", delay: 0.4 },
-
-    // Playground All Project
-    {
-      selector: "#header-label-allprojects",
-      text: "ESOM FO YM KORW",
-      delay: 0.4,
-    },
-    { selector: "#header-info-allprojects", text: "3P", delay: 0.4 },
-
-    // Process
-    {
-      selector: "#header-label-process",
-      text: "RELIABLEVED",
-      delay: 0.4,
-    },
-    { selector: "#header-info-process", text: "Z OA T", delay: 0.4 },
-  ];
+function initLineLeftText() {
+  const elements = document.querySelectorAll('[line-left]');
+  splitElements = []; // Réinitialiser le tableau d'éléments
 
   elements.forEach((element) => {
-    gsap.from(element.selector, {
-      duration: 0.8,
-      delay: element.delay,
-      text: element.text,
-      ease: "none",
+    // Réinitialisation de SplitType
+    if (element._splitType) {
+      SplitType.revert(element);
+    }
+
+    const split = new SplitType(element, { types: 'lines' });
+    splitElements.push(split); // Stocker l'instance SplitType
+
+    // Créer un conteneur avec overflow-hidden pour chaque ligne
+    split.lines.forEach((line, index) => {
+      const lineWrapper = document.createElement('div');
+      lineWrapper.style.overflow = 'hidden';
+      line.parentNode.insertBefore(lineWrapper, line);
+      lineWrapper.appendChild(line);
+
+      // Animation sans ScrollTrigger
+      gsap.fromTo(
+        line,
+        { y: '300%' },
+        {
+          y: '0%',
+          duration: 1,
+          ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+          delay: 0.2 + index * 0.1,
+        }
+      );
     });
   });
 }
 
-//Accordion Settings
-function initAccordion() {
-  function handleClick(
-    index,
-    itemStates,
-    processItems,
-    stepItems,
-    crossContainers,
-  ) {
-    const isExpanded = itemStates[index];
-    const currentItem = processItems[index];
-    const currentStep = stepItems[index];
+function initRightText() {
+  const elements = document.querySelectorAll('[line-right]');
+  elements.forEach((element) => {
+    gsap.fromTo(
+      element,
+      { y: '100%' },
+      {
+        y: '0%',
+        duration: 1,
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+        delay: 0.4,
+        scrollTrigger: {
+          trigger: element,
+          start: 'top bottom',
+        },
+      }
+    );
+  });
+}
 
-    if (!isExpanded) {
-      gsap.to(currentItem, { height: "13.25rem", duration: 0.5 });
-      gsap.to(currentStep, { opacity: 1, duration: 0.1, delay: 0.1 });
-      gsap.to(crossContainers[index], { rotation: 45, duration: 0.5 });
-      itemStates[index] = true;
-    } else {
-      gsap.to(currentItem, { height: "4.25rem", duration: 0.5 });
-      gsap.to(currentStep, { opacity: 0, duration: 0.1 });
-      gsap.to(crossContainers[index], { rotation: 0, duration: 0.5 });
-      itemStates[index] = false;
+function initLinesText() {
+  const elements = document.querySelectorAll('[lines]');
+  splitElements = [];
+
+  elements.forEach((element) => {
+    if (element._splitType) {
+      SplitType.revert(element);
     }
-  }
 
-  function resetAnimations(processItems, stepItems, crossContainers) {
-    gsap.set(processItems, { clearProps: "height" });
-    gsap.set(stepItems, { opacity: 0 });
-    gsap.set(crossContainers, { rotation: 0 });
-  }
+    const split = new SplitType(element, { types: 'lines' });
+    splitElements.push(split);
 
-  function handleWindowSize() {
-    const windowWidth = window.innerWidth;
-    const infoItems = document.querySelectorAll(".process-list_item-info");
-    const processItems = document.querySelectorAll(".process-list_item");
-    const stepItems = document.querySelectorAll(".process-list_step");
-    const crossContainers = document.querySelectorAll(".cross-container");
+    split.lines.forEach((line, index) => {
+      const lineWrapper = document.createElement('div');
+      lineWrapper.style.overflow = 'hidden';
+      line.parentNode.insertBefore(lineWrapper, line);
+      lineWrapper.appendChild(line);
 
-    if (windowWidth <= 990) {
-      const itemStates = Array.from({ length: infoItems.length }, () => false);
+      // Animation avec ScrollTrigger
+      gsap.fromTo(
+        line,
+        { y: '100%' }, // Déplacement vertical initial (lignes en dehors de la fenêtre)
+        {
+          y: '0%', // Déplacement vertical final (lignes à leur position normale)
+          duration: 1,
+          ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+          delay: 0.1 + index * 0.06,
+          scrollTrigger: {
+            trigger: lineWrapper,
+            start: 'top 150%', // Démarrer l'animation lorsque le haut de la ligne atteint le bas de la fenêtre
+          },
+        }
+      );
+    });
+  });
+}
 
-      infoItems.forEach((item, index) => {
-        item.addEventListener("click", () => {
-          handleClick(
-            index,
-            itemStates,
-            processItems,
-            stepItems,
-            crossContainers,
-          );
-        });
-      });
-    } else {
-      resetAnimations(processItems, stepItems, crossContainers);
-    }
-  }
+// Fonction pour mettre à jour les éléments SplitType
+function updateSplitText() {
+  splitElements.forEach((split) => {
+    // Mettre à jour SplitType pour refléter les changements de taille
+    split.split();
+  });
+}
 
-  window.addEventListener("resize", handleWindowSize);
-  handleWindowSize(); // Vérification initiale lors du chargement de la page
+// Écouteur d'événement pour le redimensionnement
+window.addEventListener('resize', () => {
+  updateSplitText();
+});
+
+// Opacity Project Item
+function initMenuLinkOpacity() {
+  var projectItems = $('.home-work_item');
+  projectItems.on('mouseenter', function () {
+    var otherItems = projectItems.not(this);
+    gsap.to(otherItems, {
+      filter: 'grayscale(100%)',
+      duration: 0.4,
+      ease: 'power1.out',
+    });
+  });
+  projectItems.on('mouseleave', function () {
+    gsap.to(projectItems, {
+      filter: 'grayscale(0%)',
+      duration: 0.4,
+      ease: 'power1.out',
+    });
+  });
+}
+
+// Home - Project Item Image Animation
+function initWorkItem() {
+  const images = document.querySelectorAll('.work_img');
+  images.forEach((img) => {
+    gsap.from(img, {
+      y: '-29%',
+      scrollTrigger: {
+        trigger: img,
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: 0.1,
+        ease: 'none',
+      },
+    });
+  });
+}
+
+function initWorkPageHero() {
+  const workHeroImg = document.querySelector('.work-hero_img');
+  // Animation initiale du héros
+  gsap.to(workHeroImg, {
+    duration: 1.8,
+    scale: 1,
+    delay: 0.1,
+    ease: CustomEase.create('custom', 'M0,0,C0.22,1,0.36,1,1,1'),
+  });
+  // Animation du défilement du héros
+  gsap.to(workHeroImg, {
+    y: 0,
+    scrollTrigger: {
+      trigger: workHeroImg,
+      start: 'top bottom',
+      end: 'bottom top',
+      scrub: 0.1,
+      ease: 'none',
+    },
+  });
+  // Écoutez l'événement de redimensionnement de la fenêtre
+  window.addEventListener('resize', () => {
+    // Mettez à jour la taille du texte lors du redimensionnement
+    splitTitle.revert();
+    splitNum.revert();
+  });
 }
 
 // Page Transition Animation [ENTER]
@@ -469,15 +408,33 @@ function pageEnterAnimation() {
     const tl = gsap.timeline({
       onComplete: resolve,
     });
-
-    // Désactiver le défilement lors de la transition de page
-    document.body.classList.add("no-scroll");
-
-    tl.set(".page-transition", { display: "block" }).to(".page-transition", {
-      duration: 1,
-      y: "0%",
-      ease: "power4.inOut",
-    });
+    tl.set('.page-transition', { display: 'block' })
+      .to('.page-transition', {
+        duration: 1,
+        y: '0%',
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+      })
+      .fromTo(
+        '.page-content',
+        { y: '0vh' },
+        {
+          duration: 1,
+          y: '-100vh',
+          ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+        },
+        '-=1'
+      )
+      .fromTo(
+        '.opacity-transition',
+        { opacity: 0, display: 'block' },
+        {
+          opacity: 0.8,
+          duration: 1,
+          ease: 'linear',
+          display: 'none',
+        },
+        '-=1'
+      );
   });
 }
 
@@ -485,87 +442,102 @@ function pageEnterAnimation() {
 function pageExitAnimation() {
   return new Promise((resolve) => {
     const tl = gsap.timeline({
-      onComplete: () => {
-        // Réactiver le défilement après la transition de page
-        document.body.classList.remove("no-scroll");
-        resolve();
-      },
+      onComplete: resolve,
     });
-
-    tl.set(".page-transition", { y: "0%" })
-      .to(".page-transition", {
-        duration: 0.8,
-        y: "-100%",
-        ease: "power4.inOut",
+    tl.set('.page-transition', { y: '0%' })
+      .to('.page-transition', {
+        duration: 1,
+        y: '-100%',
+        ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
       })
-      .set(".page-transition", { display: "none", y: "100%" });
+      .fromTo(
+        '.page-content',
+        { y: '50vh' },
+        {
+          duration: 1,
+          y: '0vh',
+          ease: CustomEase.create('custom', 'M0,0,C0.36,0,0.00,0.99,1,1'),
+        },
+        '-=0.8'
+      )
+      .to(
+        '.opacity-transition',
+        {
+          duration: 1,
+          opacity: 0,
+          ease: 'linear',
+        },
+        '-=1'
+      ) // Start simultaneously with the ".page-transition" animation
+      .set('.page-transition', { display: 'none', y: '100%' });
   });
 }
 
 function updateCurrentClass() {
-  $(".w-current").removeClass("w--current");
-  $(".nav a").each(function () {
-    if ($(this).attr("href") === window.location.pathname) {
-      $(this).addClass("w-current");
+  $('.w-current').removeClass('w--current');
+  $('.nav a').each(function () {
+    if ($(this).attr('href') === window.location.pathname) {
+      $(this).addClass('w--current');
     }
   });
 }
 
-function updateCurrentClass() {
-  $(".w-current").removeClass("w--current");
-  $(".nav a").each(function () {
-    if ($(this).attr("href") === window.location.pathname) {
-      $(this).addClass("w-current");
-    }
-  });
-}
-
-// Reset Webflow Animation for BarbaJS
 function resetWebflow(data) {
   let parser = new DOMParser();
-  let dom = parser.parseFromString(data.next.html, "text/html");
-  let webflowPageId = $(dom).find("html").attr("data-wf-page");
-  $("html").attr("data-wf-page", webflowPageId);
-  window.Webflow && window.Webflow.destroy();
-  window.Webflow && window.Webflow.ready();
-  window.Webflow && window.Webflow.require("ix2").init();
+  let dom = parser.parseFromString(data.next.html, 'text/html');
+  let webflowPageId = $(dom).find('html').attr('data-wf-page');
+  if (window.Webflow) {
+    $('html').attr('data-wf-page', webflowPageId);
+    if (window.Webflow.destroy) {
+      window.Webflow.destroy();
+    }
+    if (window.Webflow.ready) {
+      window.Webflow.ready();
+    }
+    let ix2Module = window.Webflow.require('ix2');
+    if (ix2Module && ix2Module.init) {
+      ix2Module.init();
+    }
+  }
 }
 
-// BarbaJS Initialisation
 barba.init({
   transitions: [
     {
       preventRunning: true,
       async leave(data) {
-        await pageEnterAnimation();
+        try {
+          await pageEnterAnimation();
+        } catch (error) {
+          // Aucune sortie d'erreur ici pour éviter la pollution de la console
+        }
       },
       enter(data) {
-        updateCurrentClass();
-        $(data.next.container).addClass("fixed");
-
-        resetWebflow(data);
-
-        gsap.to(data.next.container, {
-          onComplete: () => {
-            $(data.next.container).removeClass("fixed");
-            $(window).scrollTop(0);
-            pageExitAnimation();
-            initMenuLinkOpacity();
-            initProjectImageScrollAnimation();
-            initWorkHeroTitleAnimation();
-            initProjectHeaderImageScrollAnimation();
-            initPlaygroundAnimation();
-            iniShuffleLine();
-            initAccordion();
-            initHomeHeroLogo();
-
-            // Intégration de la lecture des vidéos après la transition
-            var videos = data.next.container.querySelectorAll("video");
-            videos.forEach(function (video) {
-              video.play();
-            });
-          },
-        });
+        try {
+          updateCurrentClass();
+          $(data.next.container).addClass('fixed');
+          resetWebflow(data);
+          gsap.to(data.next.container, {
+            onComplete: () => {
+              $(data.next.container).removeClass('fixed');
+              $(window).scrollTop(0);
+              pageExitAnimation();
+              initLineLeftText();
+              initRightText();
+              initLinesText();
+              initMenuLinkOpacity();
+              initWorkItem();
+              initWorkPageHero();
+              // Intégration de la lecture des vidéos après la transition
+              var videos = data.next.container.querySelectorAll('video');
+              videos.forEach(function (video) {
+                video.play();
+              });
+            },
+          });
+        } catch (error) {
+          // Aucune sortie d'erreur ici pour éviter la pollution de la console
+        }
       },
     },
   ],
