@@ -1,6 +1,6 @@
 gsap.registerPlugin(ScrollTrigger);
 
-document.addEventListener('DOMContentLoaded', function () {
+// document.addEventListener('DOMContentLoaded', function () {
   // Initialisation de Lenis Scroll
   const lenis = new Lenis({
     lerp: 0.1,
