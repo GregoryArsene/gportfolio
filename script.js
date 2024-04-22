@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  window.addEvetListener(
+  window.addEvtListener(
     'load',
     function () {
       var loaderTimeline = gsap.timeline();
