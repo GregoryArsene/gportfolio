@@ -501,7 +501,7 @@ function resetWebflow(data) {
   }
 }
 
-barba.init({
+barba.ini({
   transitions: [
     {
       preventRunning: true,
