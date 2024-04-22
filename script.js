@@ -1,6 +1,6 @@
 gsap.registerPlugin(ScrollTrigger);
 
-// document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function () {
   // Initialisation de Lenis Scroll
   const lenis = new Lenis({
     lerp: 0.1,
@@ -473,72 +473,3 @@ function pageExitAnimation() {
   });
 }
 
-function updateCurrentClass() {
-  $('.w-current').removeClass('w--current');
-  $('.nav a').each(function () {
-    if ($(this).attr('href') === window.location.pathname) {
-      $(this).addClass('w--current');
-    }
-  });
-}
-
-function resetWebflow(data) {
-  let parser = new DOMParser();
-  let dom = parser.parseFromString(data.next.html, 'text/html');
-  let webflowPageId = $(dom).find('html').attr('data-wf-page');
-  if (window.Webflow) {
-    $('html').attr('data-wf-page', webflowPageId);
-    if (window.Webflow.destroy) {
-      window.Webflow.destroy();
-    }
-    if (window.Webflow.ready) {
-      window.Webflow.ready();
-    }
-    let ix2Module = window.Webflow.require('ix2');
-    if (ix2Module && ix2Module.init) {
-      ix2Module.init();
-    }
-  }
-}
-
-barba.init({
-  transitions: [
-    {
-      preventRunning: true,
-      async leave(data) {
-        try {
-          await pageEnterAnimation();
-        } catch (error) {
-          // Aucune sortie d'erreur ici pour éviter la pollution de la console
-        }
-      },
-      enter(data) {
-        try {
-          updateCurrentClass();
-          $(data.next.container).addClass('fixed');
-          resetWebflow(data);
-          gsap.to(data.next.container, {
-            onComplete: () => {
-              $(data.next.container).removeClass('fixed');
-              $(window).scrollTop(0);
-              pageExitAnimation();
-              initLineLeftText();
-              initRightText();
-              initLinesText();
-              initMenuLinkOpacity();
-              initWorkItem();
-              initWorkPageHero();
-              // Intégration de la lecture des vidéos après la transition
-              var videos = data.next.container.querySelectorAll('video');
-              videos.forEach(function (video) {
-                video.play();
-              });
-            },
-          });
-        } catch (error) {
-          // Aucune sortie d'erreur ici pour éviter la pollution de la console
-        }
-      },
-    },
-  ],
-});
