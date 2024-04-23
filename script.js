@@ -215,8 +215,8 @@ document.addEventListener("DOMContentLoaded", function () {
   initRightText();
   initLinesText();
   initMenuLinkOpacity();
-  initWorkItem();
-  initWorkPageHero();
+  initProjectItem();
+  initProjectPageHero();
 });
 
 // Variables globales
@@ -340,7 +340,7 @@ window.addEventListener("resize", () => {
 
 // Grayscale Project Item
 function initMenuLinkOpacity() {
-  var projectItems = $(".home-work_item");
+  var projectItems = $(".home-project_item");
   projectItems.on("mouseenter", function () {
     var otherItems = projectItems.not(this);
     gsap.to(otherItems, {
@@ -359,8 +359,8 @@ function initMenuLinkOpacity() {
 }
 
 // Home - Project Item Image Animation
-function initWorkItem() {
-  const images = document.querySelectorAll(".work_img");
+function initProjectItem() {
+  const images = document.querySelectorAll(".project_img");
   images.forEach((img) => {
     gsap.from(img, {
       y: "-29%",
@@ -375,20 +375,20 @@ function initWorkItem() {
   });
 }
 
-function initWorkPageHero() {
-  const workHeroImg = document.querySelector(".work-hero_img");
+function initprojectPageHero() {
+  const projectHeroImg = document.querySelector(".project-hero_img");
   // Animation initiale du héros
-  gsap.to(workHeroImg, {
+  gsap.to(projectHeroImg, {
     duration: 1.2,
     scale: 1,
     delay: 0.4,
     ease: CustomEase.create("custom", "M0,0,C0.16,1,0.30,1,1,1"),
   });
   // Animation du défilement du héros
-  gsap.to(workHeroImg, {
+  gsap.to(projectHeroImg, {
     y: 0,
     scrollTrigger: {
-      trigger: workHeroImg,
+      trigger: projectHeroImg,
       start: "top bottom",
       end: "bottom top",
       scrub: 0.1,
@@ -527,8 +527,8 @@ barba.init({
               initRightText();
               initLinesText();
               initMenuLinkOpacity();
-              initWorkItem();
-              initWorkPageHero();
+              initProjectItem();
+              initProjectPageHero();
               // Intégration de la lecture des vidéos après la transition
               var videos = data.next.container.querySelectorAll("video");
               videos.forEach(function (video) {
