@@ -375,7 +375,7 @@ function initProjectItem() {
   });
 }
 
-function initprojectPageHero() {
+function initProjectPageHero() {
   const projectHeroImg = document.querySelector(".project-hero_img");
   // Animation initiale du héros
   gsap.to(projectHeroImg, {
