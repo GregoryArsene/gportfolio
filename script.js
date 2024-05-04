@@ -216,6 +216,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initLinesText();
   initMenuLinkOpacity();
   initProjectItem();
+  initIndexItem();
   initProjectPageHero();
 });
 
@@ -375,6 +376,80 @@ function initProjectItem() {
   });
 }
 
+// Index Item Animation
+function initIndexItem() {
+  const indexItems = document.querySelectorAll(".index-item");
+
+  indexItems.forEach((item) => {
+    const imgWrapper = item.querySelector(".index-item_img-wrapper");
+    const img = item.querySelector("[index-img]");
+
+    item.addEventListener("mouseover", () => {
+      gsap.fromTo(
+        img,
+        {
+          scale: 1.4,
+        },
+        {
+          scale: 1,
+          duration: 0.5,
+          ease: "ease.inOut",
+        },
+      );
+
+      gsap.fromTo(
+        imgWrapper,
+        {
+          opacity: 0,
+          scale: 0.8,
+        },
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 0.5,
+          ease: "ease.inOut",
+        },
+      );
+
+      // Ajout de l'opacité à 30% aux autres éléments .index-item
+      indexItems.forEach((otherItem) => {
+        if (otherItem !== item) {
+          gsap.to(otherItem, {
+            opacity: 0.3,
+            duration: 0.2,
+            ease: "ease.inOut",
+          });
+        }
+      });
+    });
+
+    item.addEventListener("mouseout", () => {
+      gsap.to(img, {
+        scale: 1,
+        duration: 0.5,
+        ease: "ease.inOut",
+      });
+
+      gsap.to(imgWrapper, {
+        opacity: 0,
+        duration: 0.5,
+        ease: "ease.inOut",
+      });
+
+      // Réinitialisation de l'opacité des autres éléments .index-item
+      indexItems.forEach((otherItem) => {
+        if (otherItem !== item) {
+          gsap.to(otherItem, {
+            opacity: 1,
+            duration: 0.2,
+            ease: "ease.inOut",
+          });
+        }
+      });
+    });
+  });
+}
+
 function initProjectPageHero() {
   const projectHeroImg = document.querySelector(".project-hero_img");
   // Animation initiale du héros
@@ -528,6 +603,7 @@ barba.init({
               initLinesText();
               initMenuLinkOpacity();
               initProjectItem();
+              initIndexItem();
               initProjectPageHero();
               // Intégration de la lecture des vidéos après la transition
               var videos = data.next.container.querySelectorAll("video");
