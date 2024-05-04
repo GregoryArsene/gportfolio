@@ -385,6 +385,10 @@ function initIndexItem() {
     const img = item.querySelector("[index-img]");
 
     item.addEventListener("mouseover", () => {
+      // Annuler les animations précédentes
+      gsap.killTweensOf(img);
+      gsap.killTweensOf(imgWrapper);
+
       gsap.fromTo(
         img,
         {
@@ -424,15 +428,19 @@ function initIndexItem() {
     });
 
     item.addEventListener("mouseout", () => {
+      // Annuler les animations précédentes
+      gsap.killTweensOf(img);
+      gsap.killTweensOf(imgWrapper);
+
       gsap.to(img, {
         scale: 1,
-        duration: 0.5,
+        duration: 0.3,
         ease: "ease.inOut",
       });
 
       gsap.to(imgWrapper, {
         opacity: 0,
-        duration: 0.5,
+        duration: 0.3,
         ease: "ease.inOut",
       });
 
