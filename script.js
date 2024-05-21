@@ -280,10 +280,6 @@ function initRightText() {
         duration: 0.8,
         ease: CustomEase.create("custom", "M0,0,C0.16,1,0.30,1,1,1"),
         delay: 0.7,
-        scrollTrigger: {
-          trigger: element,
-          start: "top bottom",
-        },
       },
     );
   });
@@ -376,7 +372,7 @@ function initProjectItem() {
   });
 }
 
-// Index Item Animation
+//Item Animations
 function initIndexItem() {
   const indexItems = document.querySelectorAll(".index-item");
 
@@ -385,75 +381,72 @@ function initIndexItem() {
     const img = item.querySelector("[index-img]");
 
     item.addEventListener("mouseover", () => {
-      // Annuler les animations précédentes
-      gsap.killTweensOf(img);
-      gsap.killTweensOf(imgWrapper);
+      if (window.innerWidth > 992) {
+        gsap.killTweensOf(img);
+        gsap.killTweensOf(imgWrapper);
 
-      gsap.fromTo(
-        img,
-        {
-          scale: 1.4,
-        },
-        {
-          scale: 1,
-          duration: 0.5,
-          ease: "ease.inOut",
-        },
-      );
+        gsap.fromTo(
+          img,
+          { scale: 1.4 },
+          { scale: 1, duration: 0.5, ease: "ease.inOut" },
+        );
+        gsap.fromTo(
+          imgWrapper,
+          { opacity: 0, scale: 0.8 },
+          { opacity: 1, scale: 1, duration: 0.5, ease: "ease.inOut" },
+        );
 
-      gsap.fromTo(
-        imgWrapper,
-        {
-          opacity: 0,
-          scale: 0.8,
-        },
-        {
-          opacity: 1,
-          scale: 1,
-          duration: 0.5,
-          ease: "ease.inOut",
-        },
-      );
-
-      // Ajout de l'opacité à 30% aux autres éléments .index-item
-      indexItems.forEach((otherItem) => {
-        if (otherItem !== item) {
-          gsap.to(otherItem, {
-            opacity: 0.3,
-            duration: 0.2,
-            ease: "ease.inOut",
-          });
-        }
-      });
+        indexItems.forEach((otherItem) => {
+          if (otherItem !== item) {
+            gsap.to(otherItem, {
+              opacity: 0.3,
+              duration: 0.2,
+              ease: "ease.inOut",
+            });
+          }
+        });
+      }
     });
 
     item.addEventListener("mouseout", () => {
-      // Annuler les animations précédentes
+      if (window.innerWidth > 992) {
+        gsap.killTweensOf(img);
+        gsap.killTweensOf(imgWrapper);
+
+        gsap.to(img, { scale: 1, duration: 0.3, ease: "ease.inOut" });
+        gsap.to(imgWrapper, { opacity: 0, duration: 0.3, ease: "ease.inOut" });
+
+        indexItems.forEach((otherItem) => {
+          if (otherItem !== item) {
+            gsap.to(otherItem, {
+              opacity: 1,
+              duration: 0.2,
+              ease: "ease.inOut",
+            });
+          }
+        });
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth <= 992) {
+        img.style.scale = 1;
+        imgWrapper.style.opacity = 1;
+        imgWrapper.style.transform = "scale(1)";
+        indexItems.forEach((otherItem) => {
+          otherItem.style.opacity = 1;
+        });
+      } else {
+        img.style.scale = 1;
+        imgWrapper.style.opacity = 0;
+        imgWrapper.style.transform = "scale(0.8)";
+        indexItems.forEach((otherItem) => {
+          otherItem.style.opacity = 1;
+        });
+      }
+
       gsap.killTweensOf(img);
       gsap.killTweensOf(imgWrapper);
-
-      gsap.to(img, {
-        scale: 1,
-        duration: 0.3,
-        ease: "ease.inOut",
-      });
-
-      gsap.to(imgWrapper, {
-        opacity: 0,
-        duration: 0.3,
-        ease: "ease.inOut",
-      });
-
-      // Réinitialisation de l'opacité des autres éléments .index-item
-      indexItems.forEach((otherItem) => {
-        if (otherItem !== item) {
-          gsap.to(otherItem, {
-            opacity: 1,
-            duration: 0.2,
-            ease: "ease.inOut",
-          });
-        }
-      });
     });
   });
 }
