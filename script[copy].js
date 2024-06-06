@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
       headerElement.style.mixBlendMode = "normal";
 
       // Menu Trigger Text Animation [Start]
-      gsap.to(".menu-trigger_text", {
+      gsap.to(".menu-trigger-text", {
         y: "-100%",
         duration: 0.5,
         delay: 0,
@@ -96,10 +96,10 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       // Menu Link Title
-      let typeSplitMenuLinkTitle = new SplitType(".menu-link_title", {
+      let typeSplitMenuLinkTitle = new SplitType(".menu-link-title", {
         types: "lines, words, chars",
       });
-      gsap.from(".menu-link_title .line", {
+      gsap.from(".menu-link-title .line", {
         y: "200%",
         duration: 0.8,
         ease: CustomEase.create("custom", "M0,0,C0.16,1,0.30,1,1,1"),
@@ -114,11 +114,11 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       // Menu Social Link
-      let typeSplitMenuSocialLink = new SplitType(".menu-social_link-title", {
+      let typeSplitMenuSocialLink = new SplitType(".menu-social-link-title", {
         types: "lines, words, chars",
         tagName: "span",
       });
-      gsap.from(".menu-social_link-title .word", {
+      gsap.from(".menu-social-link-title .word", {
         y: "200%",
         opacity: 1,
         duration: 1,
@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       // Menu Trigger Text Animation [End]
-      gsap.to(".menu-trigger_text", {
+      gsap.to(".menu-trigger-text", {
         y: "0%",
         duration: 0.4,
         delay: 0.3,
@@ -337,7 +337,7 @@ window.addEventListener("resize", () => {
 
 // Grayscale Project Item
 function initMenuLinkOpacity() {
-  var projectItems = $(".home-project_item");
+  var projectItems = $(".home-project-item");
   projectItems.on("mouseenter", function () {
     var otherItems = projectItems.not(this);
     gsap.to(otherItems, {
@@ -357,7 +357,7 @@ function initMenuLinkOpacity() {
 
 // Home - Project Item Image Animation
 function initProjectItem() {
-  const images = document.querySelectorAll(".project_img");
+  const images = document.querySelectorAll(".project-img");
   images.forEach((img) => {
     gsap.from(img, {
       y: "-29%",
@@ -377,7 +377,7 @@ function initIndexItem() {
   const indexItems = document.querySelectorAll(".index-item");
 
   indexItems.forEach((item) => {
-    const imgWrapper = item.querySelector(".index-item_img-wrapper");
+    const imgWrapper = item.querySelector(".index-item-img-wrapper");
     const img = item.querySelector("[index-img]");
 
     item.addEventListener("mouseover", () => {
@@ -452,7 +452,7 @@ function initIndexItem() {
 }
 
 function initProjectPageHero() {
-  const projectHeroImg = document.querySelector(".project-hero_img");
+  const projectHeroImg = document.querySelector(".project-hero-img");
   // Animation initiale du héros
   gsap.to(projectHeroImg, {
     duration: 1.2,
