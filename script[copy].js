@@ -23,11 +23,11 @@ function initLenis() {
 
 function initMenu(lenis) {
   const menu = document.querySelector(".menu");
-  const menuTrigger = document.querySelector(".menu-trigger");
+  const menuTrigger = document.querySelector(".menu_trigger");
   const menuElements = {
-    triggerText: document.querySelectorAll(".menu-trigger-text"),
-    linkTitles: document.querySelectorAll(".menu-link-title"),
-    social: document.querySelectorAll("[menu-social]"),
+    triggerText: document.querySelectorAll(".menu_trigger_text"),
+    linkTitles: document.querySelectorAll(".primary_nav_title"),
+    social: document.querySelectorAll(".secondary_nav_title"),
   };
 
   let isMenuOpen = false;
@@ -114,7 +114,7 @@ function initMenu(lenis) {
       const link = e.target;
       const href = link.getAttribute("href");
       if (href) {
-        if (link.classList.contains("secondary-nav-item")) {
+        if (link.classList.contains(".secondary_nav_link")) {
           e.stopPropagation(); // Arrêter la propagation pour les liens secondaires uniquement
           return;
         }
@@ -169,8 +169,9 @@ function initBarba(lenis, closeMenu) {
           gsap.to(nextContainer, {
             onComplete: () => {
               pageExitAnimation();
-              initLogoReveal();
               initLinesAnimations();
+              initProjectDisplay();
+              projectIndex();
             },
           });
         },
@@ -248,26 +249,91 @@ function initLinesAnimations() {
   });
 }
 
-// Logo Reveal
-function initLogoReveal() {
-  const tl = gsap.timeline();
+function initProjectDisplay() {
+  const indexBtn = document.querySelector(".projects_display_btn.is--index");
+  const gridBtn = document.querySelector(".projects_display_btn.is--grid");
+  const indexContent = document.querySelector(".index");
+  const projectsContent = document.querySelector(".projects");
 
-  tl.fromTo(
-    [".logo-path-1", ".logo-path-2", ".logo-path-3"],
-    { y: "120%" },
-    {
-      y: "0%",
-      ease: menuLinkRevealEase,
-      stagger: 0.1,
-      delay: 0.2,
-      duration: 0.8,
-    }
+  // Afficher l'index
+  indexBtn.addEventListener("click", () => {
+    // Afficher index
+    indexContent.style.display = "block";
+    // Attendre le prochain cycle pour lancer l'animation
+    requestAnimationFrame(() => {
+      indexContent.classList.add("active");
+      indexContent.classList.remove("inactive");
+    });
+
+    // Masquer projects
+    projectsContent.classList.add("inactive");
+    projectsContent.classList.remove("active");
+    // Attendre la fin de l'animation avant de masquer
+    setTimeout(() => {
+      if (projectsContent.classList.contains("inactive")) {
+        projectsContent.style.display = "none";
+      }
+    }, 300); // Durée de la transition
+  });
+
+  // Afficher les projets
+  gridBtn.addEventListener("click", () => {
+    // Afficher projects
+    projectsContent.style.display = "block";
+    requestAnimationFrame(() => {
+      projectsContent.classList.add("active");
+      projectsContent.classList.remove("inactive");
+    });
+
+    // Masquer index
+    indexContent.classList.add("inactive");
+    indexContent.classList.remove("active");
+    setTimeout(() => {
+      if (indexContent.classList.contains("inactive")) {
+        indexContent.style.display = "none";
+      }
+    }, 300);
+  });
+}
+
+function initDisplayHover() {
+  // Sélection des deux div
+  const gridButton = document.querySelector(".projects_display_btn.is--grid");
+  const indexButton = document.querySelector(".projects_display_btn.is--index");
+
+  // Fonction pour changer la couleur de l'autre bouton
+  function toggleSecondaryColor(clickedButton, otherButton) {
+    // Ajouter la classe 'secondary' à l'autre bouton et la retirer du bouton cliqué
+    clickedButton.classList.remove("secondary");
+    otherButton.classList.add("secondary");
+  }
+
+  // Ajout des écouteurs d'événements sur chaque bouton
+  gridButton.addEventListener("click", () =>
+    toggleSecondaryColor(gridButton, indexButton)
   );
+  indexButton.addEventListener("click", () =>
+    toggleSecondaryColor(indexButton, gridButton)
+  );
+}
+
+function projectIndex() {
+  const projectItems = document.querySelectorAll(".projects_index_item");
+
+  projectItems.forEach((item, index) => {
+    item.addEventListener("mouseenter", () => {
+      document.querySelector(`#index-img-${index + 1}`).style.opacity = "1";
+    });
+
+    item.addEventListener("mouseleave", () => {
+      document.querySelector(`#index-img-${index + 1}`).style.opacity = "0";
+    });
+  });
 }
 
 // Project page hero animation
 function initProjectPageHero() {
-  const projectHeroImg = document.querySelector(".project-hero-img");
+  const projectHeroImg = document.querySelector(".project_hero_img");
   if (projectHeroImg) {
     gsap
       .timeline()
@@ -292,9 +358,9 @@ function initProjectPageHero() {
 
 // Media controls initialization
 function initMediaControls() {
-  const video = document.getElementById("myVideo");
-  const playPauseBtn = document.getElementById("playPauseBtn");
-  const timeRemaining = document.getElementById("timeRemaining");
+  const video = document.getElementById("projectVideo");
+  const playPauseBtn = document.querySelector(".video_controls");
+  const timeRemaining = document.querySelector(".video_time");
 
   if (video && playPauseBtn && timeRemaining) {
     gsap.set([playPauseBtn, timeRemaining], { opacity: 0 });
@@ -422,9 +488,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const { openMenu, closeMenu } = initMenu(lenis);
   initBarba(lenis, closeMenu);
   initLinesAnimations();
-  initLogoReveal();
 
   // Initialiser les éléments spécifiques à la page au chargement initial
   initMediaControls();
   initProjectPageHero();
+  initProjectDisplay();
+  initDisplayHover();
+  projectIndex();
 });
