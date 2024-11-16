@@ -197,7 +197,7 @@ function restoreScrollPosition(path) {
 }
 
 barba.hooks.after((data) => {
-  const video = document.getElementById("myVideo");
+  const video = document.getElementById("projectVideo");
   if (video) {
     video.load();
     video.play();
@@ -247,6 +247,13 @@ function initLinesAnimations() {
     baseDelay: 0.4,
     staggerDelay: 0.1,
   });
+
+  initSplitText("[line-text-2]", {
+    fromY: "300%",
+    duration: 0.8,
+    baseDelay: 0.5,
+    staggerDelay: 0.1,
+  });
 }
 
 function initProjectDisplay() {
@@ -273,7 +280,7 @@ function initProjectDisplay() {
       if (projectsContent.classList.contains("inactive")) {
         projectsContent.style.display = "none";
       }
-    }, 300); // Durée de la transition
+    }, 250); // Durée de la transition
   });
 
   // Afficher les projets
@@ -292,7 +299,7 @@ function initProjectDisplay() {
       if (indexContent.classList.contains("inactive")) {
         indexContent.style.display = "none";
       }
-    }, 300);
+    }, 250);
   });
 }
 
@@ -363,7 +370,7 @@ function initMediaControls() {
   const timeRemaining = document.querySelector(".video_time");
 
   if (video && playPauseBtn && timeRemaining) {
-    gsap.set([playPauseBtn, timeRemaining], { opacity: 0 });
+    gsap.set([playPauseBtn, timeRemaining], { opacity: 1 });
 
     video.pause();
     playPauseBtn.textContent = "Play";
@@ -484,6 +491,12 @@ function resetWebflow(data) {
 
 // Event listener for DOM content loaded
 document.addEventListener("DOMContentLoaded", () => {
+  const video = document.getElementById("projectVideo");
+  if (video) {
+    video.load(); // Charge la vidéo
+    video.play(); // Facultatif, pour démarrer la vidéo automatiquement
+  }
+
   const lenis = initLenis();
   const { openMenu, closeMenu } = initMenu(lenis);
   initBarba(lenis, closeMenu);
