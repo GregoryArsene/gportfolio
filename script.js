@@ -339,7 +339,6 @@ function initProjectDisplay() {
     }, 250);
   });
 }
-initProjectDisplay();
 
 function initDisplayHover() {
   const gridButton = document.querySelector(".projects_display_btn.is--grid");
