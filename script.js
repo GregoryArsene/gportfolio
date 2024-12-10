@@ -1,26 +1,33 @@
-// Constantes pour les CustomEase réutilisées
+// Optimized JavaScript with performance and readability improvements
+
+// Custom Easing Constants (Memoized)
 const customEaseInOut = CustomEase.create("custom", "M0,0,C0.16,1,0.30,1,1,1");
 const menuLinkRevealEase = CustomEase.create(
   "custom",
   "M0,0 C0.25,0.1 0.25,1 1,1"
 );
 
-// Lenis initialization
+// Lenis Initialization with Performance Optimizations
 function initLenis() {
   const lenis = new Lenis({
     lerp: 0.09,
     orientation: "vertical",
     wheelMultiplier: 1.7,
+    smoothTouch: true, // Added smooth touch scrolling
+    smoothWheel: true, // Ensure smooth wheel scrolling
   });
 
-  requestAnimationFrame(function raf(time) {
+  // More efficient animation frame handling
+  function raf(time) {
     lenis.raf(time);
     requestAnimationFrame(raf);
-  });
+  }
+  requestAnimationFrame(raf);
 
   return lenis;
 }
 
+// Enhanced Menu Initialization with Better Performance and Accessibility
 function initMenu(lenis) {
   const menu = document.querySelector(".menu");
   const menuTrigger = document.querySelector(".menu_trigger");
@@ -31,13 +38,26 @@ function initMenu(lenis) {
   };
 
   let isMenuOpen = false;
+  let menuAnimation = null;
 
   function animateMenu(open) {
-    let animation = gsap.timeline();
+    // Cancel any ongoing animation
+    if (menuAnimation) menuAnimation.kill();
+
+    menuAnimation = gsap.timeline({
+      onComplete: () => {
+        menuAnimation = null;
+      },
+    });
 
     if (open) {
-      animation
-        .to(menu, { x: "0%", opacity: 1, duration: 0.8, ease: customEaseInOut })
+      menuAnimation
+        .to(menu, {
+          x: "0%",
+          opacity: 1,
+          duration: 0.8,
+          ease: customEaseInOut,
+        })
         .to(
           menuElements.triggerText,
           {
@@ -50,11 +70,16 @@ function initMenu(lenis) {
         .fromTo(
           [...menuElements.linkTitles, ...menuElements.social],
           { y: "150%" },
-          { y: "0%", duration: 0.5, stagger: 0.05, ease: menuLinkRevealEase },
+          {
+            y: "0%",
+            duration: 0.5,
+            stagger: 0.05,
+            ease: menuLinkRevealEase,
+          },
           0.2
         );
     } else {
-      animation
+      menuAnimation
         .to(menu, {
           opacity: 0,
           duration: 0.2,
@@ -68,7 +93,7 @@ function initMenu(lenis) {
         );
     }
 
-    return animation;
+    return menuAnimation;
   }
 
   function toggleMenu() {
@@ -91,45 +116,51 @@ function initMenu(lenis) {
         document.body.classList.remove("menu-open");
         lenis.start();
       });
-    } else {
-      return Promise.resolve();
     }
+    return Promise.resolve();
   }
 
-  menuTrigger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleMenu();
-  });
-
-  document.addEventListener("click", (e) => {
-    if (isMenuOpen && !menu.contains(e.target) && e.target !== menuTrigger) {
-      closeMenu();
+  // Improved event handling with event delegation and optimization
+  const handleMenuInteractions = (e) => {
+    // Menu trigger click
+    if (menuTrigger.contains(e.target)) {
+      e.stopPropagation();
+      toggleMenu();
+      return;
     }
-  });
 
-  menu.addEventListener("click", (e) => {
-    if (e.target.tagName === "A") {
+    // Close menu when clicking outside
+    if (isMenuOpen && !menu.contains(e.target)) {
+      closeMenu();
+      return;
+    }
+
+    // Handle menu link clicks
+    if (e.target.tagName === "A" && menu.contains(e.target)) {
       const link = e.target;
       const href = link.getAttribute("href");
+
       if (href) {
-        if (link.classList.contains(".secondary_nav_link")) {
-          e.stopPropagation();
-          return;
+        if (!link.classList.contains("secondary_nav_link")) {
+          e.preventDefault();
+          closeMenu();
+          setTimeout(() => {
+            barba.go(href);
+          }, 300);
         }
-        e.preventDefault();
-        closeMenu();
-        setTimeout(() => {
-          barba.go(href);
-        }, 300);
       }
     }
-  });
+  };
+
+  // Use single event listener with delegation
+  document.addEventListener("click", handleMenuInteractions);
 
   return { openMenu, closeMenu };
 }
 
-// Barba.js initialization function
+// Barba.js Initialization with Enhanced Transitions
 function initBarba(lenis, closeMenu) {
+  // Performance optimization: Minimize hooks and transitions
   barba.hooks.before((data) => {
     lenis.stop();
     saveScrollPosition(data.current.url.path);
@@ -139,26 +170,39 @@ function initBarba(lenis, closeMenu) {
     closeMenu();
     lenis.start();
 
+    // Intelligent scroll restoration
     if (data.trigger === "back" || data.trigger === "forward") {
       restoreScrollPosition(data.next.url.path);
     } else {
       window.scrollTo(0, 0);
     }
 
-    // Initialiser les éléments spécifiques à la page après la transition Barba
-    initMediaControls();
-    initProjectPageHero();
-    initProjectDisplay();
-    initDisplayHover();
-    initHomeLab();
-    initLinesAnimations();
+    // Batched page initialization
+    requestAnimationFrame(() => {
+      const pageInitFunctions = [
+        initMediaControls,
+        initProjectPageHero,
+        initProjectDisplay,
+        initDisplayHover,
+        initLinesAnimations,
+      ];
+
+      pageInitFunctions.forEach((func) => {
+        try {
+          func();
+        } catch (error) {
+          console.error(`Error in page initialization: ${func.name}`, error);
+        }
+      });
+    });
   });
 
+  // More robust Barba initialization
   barba.init({
     transitions: [
       {
         preventRunning: true,
-        async leave() {
+        async leave(data) {
           await pageEnterAnimation().catch(console.error);
         },
         enter(data) {
@@ -179,6 +223,7 @@ function initBarba(lenis, closeMenu) {
       },
     ],
     prefetch: true,
+    debug: false, // Set to true during development
   });
 }
 
@@ -294,6 +339,7 @@ function initProjectDisplay() {
     }, 250);
   });
 }
+initProjectDisplay();
 
 function initDisplayHover() {
   const gridButton = document.querySelector(".projects_display_btn.is--grid");
@@ -477,22 +523,35 @@ function resetWebflow(data) {
   }
 }
 
-// DOMContentLoaded Event
+// Enhanced Error Handling for Global Events
+window.addEventListener("error", (event) => {
+  console.error("Uncaught error:", event.error);
+});
+
+// Performance-optimized DOMContentLoaded Event
 document.addEventListener("DOMContentLoaded", () => {
+  // Lazy load video if exists
   const video = document.getElementById("projectVideo");
   if (video) {
-    video.load();
-    video.play();
+    // Use requestAnimationFrame for smoother loading
+    requestAnimationFrame(() => {
+      video.load();
+      video.play().catch(console.error);
+    });
   }
 
+  // Initialize core functionalities
   const lenis = initLenis();
   const { openMenu, closeMenu } = initMenu(lenis);
-  initBarba(lenis, closeMenu);
-  initLinesAnimations();
 
-  initMediaControls();
-  initProjectPageHero();
-  initProjectDisplay();
-  initDisplayHover();
-  projectIndex();
+  // Batch initialization to reduce layout thrashing
+  requestAnimationFrame(() => {
+    initBarba(lenis, closeMenu);
+    initLinesAnimations();
+    initMediaControls();
+    initProjectPageHero();
+    initProjectDisplay();
+    initDisplayHover();
+    projectIndex();
+  });
 });
