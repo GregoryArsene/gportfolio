@@ -7,6 +7,29 @@ const menuLinkRevealEase = CustomEase.create(
   "M0,0 C0.25,0.1 0.25,1 1,1"
 );
 
+// --- Preloader Integration Start ---
+function isWebflowCSSLoaded() {
+  // Remplacez .page-code par le sélecteur qui est *uniquement* présent dans votre CSS critique.
+  const cssLoaded = !!document.querySelector(".page-preloader");
+  return cssLoaded;
+}
+
+function initPreloader() {
+  document.fonts.ready.then(() => {
+    if (isWebflowCSSLoaded()) {
+      document.documentElement.classList.add("is-ready");
+    } else {
+      const checkInterval = setInterval(() => {
+        if (isWebflowCSSLoaded()) {
+          document.documentElement.classList.add("is-ready");
+          clearInterval(checkInterval);
+        }
+      }, 100);
+    }
+  });
+}
+// --- Preloader Integration End ---
+
 // Lenis Initialization with Performance Optimizations
 function initLenis() {
   const lenis = new Lenis({
@@ -184,7 +207,6 @@ function initBarba(lenis, closeMenu) {
         initProjectPageHero,
         initProjectDisplay,
         initDisplayHover,
-        initHomeLab,
         initLinesAnimations,
       ];
 
@@ -530,6 +552,9 @@ window.addEventListener("error", (event) => {
 
 // Performance-optimized DOMContentLoaded Event
 document.addEventListener("DOMContentLoaded", () => {
+  // --- Preloader Initialization ---
+  initPreloader();
+
   // Lazy load video if exists
   const video = document.getElementById("projectVideo");
   if (video) {
