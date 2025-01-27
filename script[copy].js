@@ -3,6 +3,10 @@ const menuLinkRevealEase = CustomEase.create(
   "custom",
   "M0,0 C0.25,0.1 0.25,1 1,1"
 );
+const labLetterEase = CustomEase.create(
+  "custom",
+  "M0,0 C0.368,0.02 0.011,0.997 1,1"
+);
 
 function isWebflowCSSLoaded() {
   const cssLoaded = !!document.querySelector(".page-code-preloader");
@@ -42,17 +46,45 @@ function initLenis() {
   return lenis;
 }
 
+// Définition de la fonction forceCloseMenu
+function forceCloseMenu(menu, menuTrigger) {
+  const isMenuOpen = document.body.classList.contains("menu-open"); // Vérifie si le menu est ouvert
+  if (isMenuOpen) {
+    gsap.to(menu, {
+      opacity: 0,
+      duration: 0.2,
+      ease: "power2.inOut",
+      onComplete: () => {
+        gsap.set(menu, { x: "100%" });
+        document.body.classList.remove("menu-open");
+        // Gestion du focus
+        menu.setAttribute("aria-hidden", "true");
+        menuTrigger.setAttribute("aria-expanded", "false");
+        menuTrigger.focus(); // Remet le focus sur le bouton
+      },
+    });
+    gsap.to(".menu-trigger_text", {
+      y: "0%",
+      duration: 0.3,
+      ease: "power2.inOut",
+    });
+  }
+}
+
 function initMenu(lenis) {
   const menu = document.querySelector(".menu");
-  const menuTrigger = document.querySelector(".menu_trigger");
+  const menuTrigger = document.querySelector(".menu-trigger");
   const menuElements = {
-    triggerText: document.querySelectorAll(".menu_trigger_text"),
-    linkTitles: document.querySelectorAll(".primary_nav_title"),
-    social: document.querySelectorAll(".secondary_nav_title"),
+    triggerText: document.querySelectorAll(".menu-trigger_text"),
+    linkTitles: document.querySelectorAll(".primary-nav_title"),
+    social: document.querySelectorAll(".secondary-nav_title"),
   };
 
   let isMenuOpen = false;
   let menuAnimation = null;
+
+  // Assurez-vous que le menu est focusable
+  menu.setAttribute("tabindex", "-1");
 
   function animateMenu(open) {
     if (menuAnimation) menuAnimation.kill();
@@ -117,8 +149,11 @@ function initMenu(lenis) {
     if (!isMenuOpen) {
       isMenuOpen = true;
       document.body.classList.add("menu-open");
-      lenis.stop();
       animateMenu(true);
+      // Gestion du focus
+      menu.setAttribute("aria-hidden", "false");
+      menuTrigger.setAttribute("aria-expanded", "true");
+      menu.focus(); // Met le focus sur le menu
     }
   }
 
@@ -127,11 +162,25 @@ function initMenu(lenis) {
       isMenuOpen = false;
       return animateMenu(false).then(() => {
         document.body.classList.remove("menu-open");
-        lenis.start();
+        // Gestion du focus
+        menu.setAttribute("aria-hidden", "true");
+        menuTrigger.setAttribute("aria-expanded", "false");
+        menuTrigger.focus(); // Remet le focus sur le bouton
       });
     }
     return Promise.resolve();
   }
+
+  // Gestionnaire de redimensionnement
+  function handleResize() {
+    if (window.innerWidth > 568 && isMenuOpen) {
+      // Si l'écran est plus large que 568px et que le menu est ouvert, fermez-le
+      forceCloseMenu(menu, menuTrigger);
+    }
+  }
+
+  // Ajoutez l'écouteur d'événement pour le redimensionnement
+  window.addEventListener("resize", handleResize);
 
   const handleMenuInteractions = (e) => {
     if (menuTrigger.contains(e.target)) {
@@ -150,7 +199,7 @@ function initMenu(lenis) {
       const href = link.getAttribute("href");
 
       if (href) {
-        if (!link.classList.contains("secondary_nav_link")) {
+        if (!link.classList.contains("secondary-nav_link")) {
           e.preventDefault();
           closeMenu();
           setTimeout(() => {
@@ -163,7 +212,7 @@ function initMenu(lenis) {
 
   document.addEventListener("click", handleMenuInteractions);
 
-  return { openMenu, closeMenu };
+  return { openMenu, closeMenu, forceCloseMenu };
 }
 
 function initBarba(lenis, closeMenu) {
@@ -175,22 +224,27 @@ function initBarba(lenis, closeMenu) {
   barba.hooks.after((data) => {
     document.documentElement.style.height = "auto";
     document.body.style.height = "auto";
-    closeMenu();
     lenis.start();
+
+    // Fermez le menu après chaque transition de page
+    const menu = document.querySelector(".menu");
+    const menuTrigger = document.querySelector(".menu-trigger");
+    forceCloseMenu(menu, menuTrigger);
 
     if (data.trigger === "back" || data.trigger === "forward") {
       restoreScrollPosition(data.next.url.path);
     } else {
-      window.scrollTo(0, 0);
+      window.scrollTo(0, 0); // Scroll vers le haut de la page
     }
 
     requestAnimationFrame(() => {
       const pageInitFunctions = [
-        initMediaControls,
         initProjectPageHero,
         initProjectDisplay,
         initDisplayHover,
         initLinesAnimations,
+        initVideoPlayer,
+        // initLabLetter, // Supprimé car déjà appelé dans la transition 'enter'
       ];
 
       pageInitFunctions.forEach((func) => {
@@ -223,6 +277,14 @@ function initBarba(lenis, closeMenu) {
               initLinesAnimations();
               initProjectDisplay();
               projectIndex();
+              initLabLetter();
+              initVideoPlayer();
+              // Fermez le menu à l'entrée d'une nouvelle page si on est sur desktop
+              if (window.innerWidth > 568) {
+                const menu = document.querySelector(".menu");
+                const menuTrigger = document.querySelector(".menu-trigger");
+                forceCloseMenu(menu, menuTrigger);
+              }
             },
           });
         },
@@ -245,14 +307,6 @@ function restoreScrollPosition(path) {
     window.scrollTo(0, 0);
   }
 }
-
-barba.hooks.after((data) => {
-  const video = document.getElementById("projectVideo");
-  if (video) {
-    video.load();
-    video.play();
-  }
-});
 
 window.addEventListener("popstate", () => {
   const navigationType = performance.getEntriesByType("navigation")[0].type;
@@ -305,8 +359,8 @@ function initLinesAnimations() {
 }
 
 function initProjectDisplay() {
-  const indexBtn = document.querySelector(".projects_display_btn.is--index");
-  const gridBtn = document.querySelector(".projects_display_btn.is--grid");
+  const indexBtn = document.querySelector(".projects-display_btn.is--index");
+  const gridBtn = document.querySelector(".projects-display_btn.is--grid");
   const indexContent = document.querySelector(".index");
   const projectsContent = document.querySelector(".projects");
 
@@ -317,65 +371,56 @@ function initProjectDisplay() {
     return;
   }
 
+  // État initial
+  gridBtn.classList.add("btn_selected");
+  gridBtn.classList.remove("btn_not-selected");
+  indexBtn.classList.add("btn_not-selected");
+  indexBtn.classList.remove("btn_selected");
+
+  function switchButtons(selectedBtn, unselectedBtn) {
+    selectedBtn.classList.add("btn_selected");
+    selectedBtn.classList.remove("btn_not-selected");
+    unselectedBtn.classList.add("btn_not-selected");
+    unselectedBtn.classList.remove("btn_selected");
+  }
+
   indexBtn.addEventListener("click", () => {
+    // Transition du contenu
     indexContent.style.display = "block";
+    projectsContent.classList.add("inactive");
     requestAnimationFrame(() => {
       indexContent.classList.add("active");
       indexContent.classList.remove("inactive");
     });
 
-    projectsContent.classList.add("inactive");
-    projectsContent.classList.remove("active");
     setTimeout(() => {
-      if (projectsContent.classList.contains("inactive")) {
-        projectsContent.style.display = "none";
-      }
+      projectsContent.style.display = "none";
     }, 250);
+
+    // Basculement des classes
+    switchButtons(indexBtn, gridBtn);
   });
 
   gridBtn.addEventListener("click", () => {
+    // Transition du contenu
     projectsContent.style.display = "block";
+    indexContent.classList.add("inactive");
     requestAnimationFrame(() => {
       projectsContent.classList.add("active");
       projectsContent.classList.remove("inactive");
     });
 
-    indexContent.classList.add("inactive");
-    indexContent.classList.remove("active");
     setTimeout(() => {
-      if (indexContent.classList.contains("inactive")) {
-        indexContent.style.display = "none";
-      }
+      indexContent.style.display = "none";
     }, 250);
+
+    // Basculement des classes
+    switchButtons(gridBtn, indexBtn);
   });
 }
 
-function initDisplayHover() {
-  const gridButton = document.querySelector(".projects_display_btn.is--grid");
-  const indexButton = document.querySelector(".projects_display_btn.is--index");
-
-  if (!gridButton || !indexButton) {
-    console.warn(
-      "Les boutons nécessaires pour initDisplayHover sont absents de cette page."
-    );
-    return;
-  }
-
-  function toggleSecondaryColor(clickedButton, otherButton) {
-    clickedButton.classList.remove("secondary");
-    otherButton.classList.add("secondary");
-  }
-
-  gridButton.addEventListener("click", () =>
-    toggleSecondaryColor(gridButton, indexButton)
-  );
-  indexButton.addEventListener("click", () =>
-    toggleSecondaryColor(indexButton, gridButton)
-  );
-}
-
 function projectIndex() {
-  const projectItems = document.querySelectorAll(".projects_index_item");
+  const projectItems = document.querySelectorAll(".projects-index_item");
 
   projectItems.forEach((item, index) => {
     item.addEventListener("mouseenter", () => {
@@ -389,7 +434,7 @@ function projectIndex() {
 }
 
 function initProjectPageHero() {
-  const projectHeroImg = document.querySelector(".project_hero_img");
+  const projectHeroImg = document.querySelector(".hero-project_img");
   if (projectHeroImg) {
     gsap
       .timeline()
@@ -412,18 +457,24 @@ function initProjectPageHero() {
   }
 }
 
-function initMediaControls() {
-  const video = document.getElementById("projectVideo");
-  const playPauseBtn = document.querySelector(".video_controls");
-  const timeRemaining = document.querySelector(".video_time");
+function initVideoPlayer() {
+  document.querySelectorAll(".video-player").forEach((videoPlayer) => {
+    const video = videoPlayer.querySelector("video");
+    const playPauseBtn = videoPlayer.querySelector(".video-controls");
+    const timeRemaining = videoPlayer.querySelector(".video-time");
+    let timeout;
 
-  if (video && playPauseBtn && timeRemaining) {
-    gsap.set([playPauseBtn, timeRemaining], { opacity: 1 });
+    if (!video || !playPauseBtn || !timeRemaining) {
+      console.warn("Éléments vidéo manquants dans un conteneur .video-player");
+      return;
+    }
+
+    gsap.set([playPauseBtn, timeRemaining], { opacity: 0 }); // Initialement cachés
 
     video.pause();
     playPauseBtn.textContent = "Play";
 
-    video.addEventListener("click", () => {
+    videoPlayer.addEventListener("click", () => {
       if (video.paused) {
         video.play();
         playPauseBtn.textContent = "Pause";
@@ -442,18 +493,54 @@ function initMediaControls() {
         .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
     });
 
-    video.addEventListener("mouseenter", () => {
-      gsap.to([playPauseBtn, timeRemaining], { opacity: 1, duration: 0.2 });
+    videoPlayer.addEventListener("mouseenter", () => {
+      gsap.to([playPauseBtn, timeRemaining], { opacity: 1, duration: 0.5 });
+      clearTimeout(timeout); // Annule le timeout de disparition si la souris revient
     });
 
-    video.addEventListener("mouseleave", () => {
-      gsap.to([playPauseBtn, timeRemaining], {
-        opacity: 0,
-        duration: 0.2,
-        delay: 0.5,
-      });
+    videoPlayer.addEventListener("mouseleave", () => {
+      timeout = setTimeout(() => {
+        gsap.to([playPauseBtn, timeRemaining], { opacity: 0, duration: 1 });
+      }, 3000);
     });
-  }
+  });
+}
+function initLabLetter() {
+  // Animation pour lab-letter-left
+  gsap.fromTo(
+    "#lab-letter-left",
+    {
+      x: "15vw",
+    },
+    {
+      x: 0,
+      duration: 2,
+      ease: labLetterEase, // ← Ici la référence
+      scrollTrigger: {
+        trigger: ".home-lab_btm",
+        start: "top 80%",
+        toggleActions: "play none none none",
+      },
+    }
+  );
+
+  // Animation pour lab-letter-right
+  gsap.fromTo(
+    "#lab-letter-right",
+    {
+      x: "-15vw",
+    },
+    {
+      x: 0,
+      duration: 2,
+      ease: labLetterEase, // ← Ici la référence
+      scrollTrigger: {
+        trigger: ".home-lab_btm",
+        start: "top 80%",
+        toggleActions: "play none none none",
+      },
+    }
+  );
 }
 
 async function pageEnterAnimation() {
@@ -522,14 +609,24 @@ function updateCurrentClass() {
 }
 
 function resetWebflow(data) {
-  const parser = new DOMParser();
-  const dom = parser.parseFromString(data.next.html, "text/html");
-  const webflowPageId = dom.querySelector("html").getAttribute("data-wf-page");
-  if (window.Webflow) {
-    document.documentElement.setAttribute("data-wf-page", webflowPageId);
-    window.Webflow.destroy();
-    window.Webflow.ready();
-    window.Webflow.require("ix2").init();
+  try {
+    const parser = new DOMParser();
+    const dom = parser.parseFromString(data.next.html, "text/html");
+    const webflowPageId = dom
+      .querySelector("html")
+      ?.getAttribute("data-wf-page");
+
+    if (webflowPageId) {
+      document.documentElement.setAttribute("data-wf-page", webflowPageId);
+    }
+
+    if (window.Webflow) {
+      window.Webflow.destroy();
+      window.Webflow.ready();
+      window.Webflow.require("ix2")?.init();
+    }
+  } catch (error) {
+    console.error("Webflow reset error:", error);
   }
 }
 
@@ -539,13 +636,6 @@ window.addEventListener("error", (event) => {
 
 document.addEventListener("DOMContentLoaded", () => {
   initPreloader();
-  const video = document.getElementById("projectVideo");
-  if (video) {
-    requestAnimationFrame(() => {
-      video.load();
-      video.play().catch(console.error);
-    });
-  }
 
   const lenis = initLenis();
   const { openMenu, closeMenu } = initMenu(lenis);
@@ -553,13 +643,14 @@ document.addEventListener("DOMContentLoaded", () => {
   requestAnimationFrame(() => {
     initBarba(lenis, closeMenu);
     initLinesAnimations();
-    initMediaControls();
     initProjectPageHero();
+    initLabLetter();
+    initVideoPlayer(); // Initialisation au chargement de la page
 
-    if (document.querySelector(".projects_display_btn.is--index")) {
+    if (document.querySelector(".projects-display_btn.is--index")) {
       initProjectDisplay();
     }
-    if (document.querySelector(".projects_display_btn.is--grid")) {
+    if (document.querySelector(".projects-display_btn.is--grid")) {
       initDisplayHover();
     }
     projectIndex();
