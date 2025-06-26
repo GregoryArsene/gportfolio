@@ -496,44 +496,75 @@ function initViewSwitcher() {
 }
 
 function initLabGallery() {
-  const e = document.querySelector(".lab-gallery_content");
-  if (!e) return;
-  const n = Array.from(e.querySelectorAll(".lab-grid_item"));
-  if (n.length === 0) return;
-  function r() {
-    const r = window
-      .getComputedStyle(e)
+  const galleryContainer = document.querySelector(".lab-gallery_content");
+  if (!galleryContainer) return;
+
+  const gridItems = Array.from(
+    galleryContainer.querySelectorAll(".lab-grid_item")
+  );
+  if (gridItems.length === 0) return;
+
+  function buildColumns() {
+    // --- MODIFICATION 1 : Lire les styles de la grille AVANT de la modifier ---
+    const computedStyles = window.getComputedStyle(galleryContainer);
+    const numColumns = computedStyles
       .getPropertyValue("grid-template-columns")
       .split(" ")
-      .filter((e) => "0px" !== e && e).length;
-    if (r === 0) return;
-    const i = Array.from({ length: r }, () => []);
-    n.forEach((e, t) => {
-      i[t % r].push(e);
+      .filter((val) => "0px" !== val && val).length;
+
+    if (numColumns === 0) return;
+
+    // On récupère les valeurs de gap pour les réappliquer plus tard
+    const verticalGap = computedStyles.getPropertyValue("row-gap");
+    const horizontalGap = computedStyles.getPropertyValue("column-gap");
+
+    // --- Fin de la modification 1 ---
+
+    const columnsData = Array.from({ length: numColumns }, () => []);
+    gridItems.forEach((item, index) => {
+      columnsData[index % numColumns].push(item);
     });
-    const a = document.createDocumentFragment(),
-      s = (r - 1) / 2,
-      l = [];
-    i.forEach((e, t) => {
-      const o = document.createElement("div");
-      o.className = "lab-gallery_column";
-      e.forEach((e) => o.appendChild(e));
-      a.appendChild(o);
-      const n = 0 + 0.05 * Math.abs(t - s);
-      l.push({ element: o, lag: n });
+
+    const fragment = document.createDocumentFragment();
+    const centerIndex = (numColumns - 1) / 2;
+    const smootherEffects = [];
+
+    columnsData.forEach((items, index) => {
+      const column = document.createElement("div");
+      column.className = "lab-gallery_column";
+
+      // --- MODIFICATION 2 : Appliquer le gap vertical à chaque nouvelle colonne ---
+      // Pour que le gap fonctionne, la colonne doit être un conteneur (flex ou grid)
+      column.style.display = "flex";
+      column.style.flexDirection = "column";
+      column.style.gap = verticalGap; // Applique l'espacement entre les items de la colonne
+      // --- Fin de la modification 2 ---
+
+      items.forEach((item) => column.appendChild(item));
+      fragment.appendChild(column);
+
+      const lag = 0 + 0.05 * Math.abs(index - centerIndex);
+      smootherEffects.push({ element: column, lag: lag });
     });
-    e.innerHTML = "";
-    e.appendChild(a);
-    e.style.display = "flex";
+
+    galleryContainer.innerHTML = "";
+    galleryContainer.appendChild(fragment);
+
+    // --- MODIFICATION 3 : Appliquer le gap horizontal entre les colonnes ---
+    galleryContainer.style.display = "flex";
+    galleryContainer.style.gap = horizontalGap; // Applique l'espacement entre les colonnes
+    // --- Fin de la modification 3 ---
+
     if (smoother) {
-      l.forEach(({ element: e, lag: t }) => {
-        smoother.effects(e, { speed: 1, lag: t });
+      smootherEffects.forEach(({ element, lag }) => {
+        smoother.effects(element, { speed: 1, lag: lag });
       });
     }
-    e.classList.add("gallery-is-ready");
+    galleryContainer.classList.add("gallery-is-ready");
   }
+
   document.fonts.ready.then(() => {
-    setTimeout(r, 50);
+    setTimeout(buildColumns, 50);
   });
 }
 
