@@ -6,9 +6,10 @@ const isTouchMobile =
   window.matchMedia("(max-width: 1023px)").matches &&
   ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
+// Debounce optimisé avec AbortController pour le cleanup
 const debounce = (func, delay, immediate = false) => {
   let timeout;
-  return function executedFunction(...args) {
+  const debounced = function executedFunction(...args) {
     const callNow = immediate && !timeout;
     clearTimeout(timeout);
     timeout = setTimeout(() => {
@@ -17,6 +18,9 @@ const debounce = (func, delay, immediate = false) => {
     }, delay);
     if (callNow) func.apply(this, args);
   };
+
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
 };
 
 // Cache des CustomEase pour éviter les recréations
@@ -45,22 +49,22 @@ function initScrollSmoother() {
     smoother.kill();
     smoother = null;
   }
+
   if (isTouchMobile) {
     console.log(
       "ScrollSmoother et ScrollTrigger désactivés pour les écrans tactiles < 1024px."
     );
-    if (window.ScrollTrigger) {
-      ScrollTrigger.disable(true);
-    }
+    ScrollTrigger?.disable(true);
     return null;
   }
+
   console.log("ScrollSmoother activé.");
   smoother = ScrollSmoother.create({
     wrapper: "#smooth-wrapper",
     content: "#smooth-content",
     smooth: 1.2,
     effects: true,
-    speed: 1,
+    speed: 1.2,
     normalizeScroll: true,
   });
   return smoother;
@@ -68,22 +72,27 @@ function initScrollSmoother() {
 
 // Menu optimisé avec WeakMap pour éviter les fuites mémoire
 const menuElementsCache = new WeakMap();
+const menuCallbacks = new WeakMap();
 
 function initMenu() {
   const menuElement = document.querySelector(".menu");
   const triggerElement = document.querySelector(".menu-trigger");
+  const backgroundOverlay = document.querySelector(".menu-background-overlay");
 
-  if (!menuElement || !triggerElement) {
+  if (!menuElement || !triggerElement || !backgroundOverlay) {
+    console.error("Élément de menu, de déclencheur ou de fond manquant.");
     return {
       openMenu: () => {},
       closeMenu: () => {},
       isMenuOpen: () => false,
+      cleanup: () => {},
     };
   }
 
+  gsap.set(menuElement, { x: "100%" });
   let isMenuOpen = false;
 
-  // Cache des éléments avec WeakMap pour éviter les fuites
+  // Cache des éléments avec sélection optimisée
   let elements = menuElementsCache.get(menuElement);
   if (!elements) {
     elements = {
@@ -96,30 +105,27 @@ function initMenu() {
     menuElementsCache.set(menuElement, elements);
   }
 
-  // Timelines réutilisables
+  // Fonction utilitaire pour les mises à jour d'état
+  const updateMenuState = (open) => {
+    isMenuOpen = open;
+    document.body.classList.toggle("menu-open", open);
+    menuElement.setAttribute("aria-hidden", !open);
+    triggerElement.setAttribute("aria-expanded", open);
+  };
+
+  // Timeline d'ouverture optimisée
   const openTimeline = gsap
     .timeline({
       paused: true,
       defaults: { overwrite: "auto" },
-      onComplete: () => {
-        menuElement.setAttribute("aria-hidden", "false");
-        triggerElement.setAttribute("aria-expanded", "true");
-      },
+      onStart: () => updateMenuState(true),
     })
-    .to(menuElement, {
-      x: "0%",
-      opacity: 1,
-      duration: 0.8,
-      ease: EASES.customInOut,
-    })
+    .to(menuElement, { x: "0%", duration: 0.6, ease: EASES.reveal })
+    .to(backgroundOverlay, { opacity: 0.4, duration: 0.6 }, "<")
     .to(
       elements.triggerText,
-      {
-        y: "-100%",
-        duration: 0.5,
-        ease: EASES.menuLinkReveal,
-      },
-      0
+      { y: "-100%", duration: 0.5, ease: EASES.menuLinkReveal },
+      "<"
     )
     .fromTo(
       [
@@ -129,55 +135,38 @@ function initMenu() {
         ...elements.label,
       ],
       { y: "200%" },
-      {
-        y: "0%",
-        duration: 0.5,
-        stagger: 0.05,
-        ease: EASES.menuLinkReveal,
-      },
-      0.2
+      { y: "0%", duration: 0.5, stagger: 0.05, ease: EASES.menuLinkReveal },
+      "<0.2"
     );
 
+  // Timeline de fermeture optimisée
   const closeTimeline = gsap
     .timeline({
       paused: true,
       defaults: { overwrite: "auto" },
-      onComplete: () => {
-        menuElement.setAttribute("aria-hidden", "true");
-        triggerElement.setAttribute("aria-expanded", "false");
-        menuElement.style.transform = "translateX(100%)";
-      },
+      onStart: () => updateMenuState(false),
     })
-    .to(menuElement, {
-      opacity: 0,
-      duration: 0.2,
-      ease: "power2.inOut",
-    })
+    .to(menuElement, { x: "100%", duration: 0.4, ease: EASES.reveal })
+    .to(backgroundOverlay, { opacity: 0, duration: 0.4 }, "<")
     .to(
       elements.triggerText,
-      {
-        y: "0%",
-        duration: 0.3,
-        ease: "power2.inOut",
-      },
-      0
+      { y: "0%", duration: 0.3, ease: EASES.menuLinkReveal },
+      "<"
     );
 
   const openMenu = () => {
     if (isMenuOpen) return;
-    isMenuOpen = true;
-    document.body.classList.add("menu-open");
+    closeTimeline.pause();
     openTimeline.restart();
   };
 
-  const closeMenu = (fast = false) => {
+  const closeMenu = () => {
     if (!isMenuOpen) return;
-    isMenuOpen = false;
-    closeTimeline.duration(fast ? 0.25 : 0.2).restart();
-    document.body.classList.remove("menu-open");
+    openTimeline.pause();
+    closeTimeline.restart();
   };
 
-  // Event listeners optimisés
+  // Gestion des événements optimisée avec délégation
   const handleClick = (event) => {
     if (triggerElement.contains(event.target)) {
       event.stopPropagation();
@@ -193,24 +182,26 @@ function initMenu() {
     }
   };
 
-  document.addEventListener("click", handleClick);
-  document.addEventListener("keydown", handleKeydown);
+  // Stockage des callbacks pour le cleanup
+  const callbacks = { handleClick, handleKeydown };
+  menuCallbacks.set(menuElement, callbacks);
 
-  // Cleanup function pour éviter les fuites mémoire
+  document.addEventListener("click", handleClick, { passive: true });
+  document.addEventListener("keydown", handleKeydown, { passive: true });
+
   const cleanup = () => {
-    document.removeEventListener("click", handleClick);
-    document.removeEventListener("keydown", handleKeydown);
+    const storedCallbacks = menuCallbacks.get(menuElement);
+    if (storedCallbacks) {
+      document.removeEventListener("click", storedCallbacks.handleClick);
+      document.removeEventListener("keydown", storedCallbacks.handleKeydown);
+      menuCallbacks.delete(menuElement);
+    }
     openTimeline.kill();
     closeTimeline.kill();
     menuElementsCache.delete(menuElement);
   };
 
-  return {
-    openMenu,
-    closeMenu,
-    isMenuOpen: () => isMenuOpen,
-    cleanup,
-  };
+  return { openMenu, closeMenu, isMenuOpen: () => isMenuOpen, cleanup };
 }
 
 function resetWebflow() {
@@ -223,7 +214,7 @@ function resetWebflow() {
   }
 }
 
-// Video player optimisé avec cleanup et performance améliorée
+// Video player optimisé avec gestion d'état centralisée
 function initVideoPlayer() {
   const elements = {
     morphPath1: document.getElementById("morphPath1"),
@@ -238,21 +229,25 @@ function initVideoPlayer() {
     video: document.querySelector("video"),
   };
 
-  // Vérification early return si éléments manquants
+  // Early return optimisé
   if (!elements.video || !elements.morphPath1 || !elements.morphPath2) {
     return {
       play: () => {},
       pause: () => {},
       toggle: () => {},
       isPlaying: () => false,
+      cleanup: () => {},
     };
   }
 
-  let isPlaying = false;
-  let hideTimeout = null;
-  let isHovering = false;
+  // État centralisé
+  const state = {
+    isPlaying: false,
+    hideTimeout: null,
+    isHovering: false,
+  };
 
-  // Fonction utilitaire pour formatter le temps
+  // Utilitaires optimisés
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -261,42 +256,33 @@ function initVideoPlayer() {
       .padStart(2, "0")}`;
   };
 
-  // Gestion optimisée de la visibilité des éléments
-  const fadeElements = (elementsArray, opacity, duration = 0.5) => {
-    elementsArray.forEach((element) => {
-      if (element) {
-        gsap.to(element, {
-          duration,
-          opacity,
-          ease: "power2.out",
-        });
-      }
+  // Gestion optimisée de la visibilité avec batch updates
+  const updateVisibility = (elementsArray, opacity, duration = 0.5) => {
+    const validElements = elementsArray.filter(Boolean);
+    if (validElements.length === 0) return;
+
+    gsap.to(validElements, {
+      duration,
+      opacity,
+      ease: "power2.out",
     });
   };
 
-  const hideTextElements = () => {
-    if (!isHovering) {
-      fadeElements([elements.videoTitle, elements.videoDuration], 0);
+  const showHideElements = (show) => {
+    const textElements = [elements.videoTitle, elements.videoDuration];
+    const controlElements = [
+      elements.videoIdTop,
+      elements.videoIdBtm,
+      elements.videoControls,
+    ];
+
+    if (show || !state.isHovering) {
+      updateVisibility(textElements, show ? 1 : 0);
     }
-  };
 
-  const showTextElements = () => {
-    fadeElements([elements.videoTitle, elements.videoDuration], 1);
-  };
-
-  const hideControlElements = () => {
-    if (isHovering) return;
-    fadeElements(
-      [elements.videoIdTop, elements.videoIdBtm, elements.videoControls],
-      0
-    );
-  };
-
-  const showControlElements = () => {
-    fadeElements(
-      [elements.videoIdTop, elements.videoIdBtm, elements.videoControls],
-      1
-    );
+    if (show || (!state.isHovering && state.isPlaying)) {
+      updateVisibility(controlElements, show ? 1 : 0);
+    }
   };
 
   // Constantes pour les paths SVG
@@ -311,152 +297,124 @@ function initVideoPlayer() {
     },
   };
 
-  const updateToPlayState = () => {
-    const { path1, path2 } = SVG_PATHS.play;
+  // Mise à jour d'état optimisée
+  const updatePlayerState = (playing) => {
+    const paths = SVG_PATHS[playing ? "pause" : "play"];
+    const duration = playing ? 0.5 : 0.5;
+
+    // Animation des paths en parallèle
     gsap.to(elements.morphPath1, {
-      duration: 0.5,
-      attr: { points: path1 },
+      duration,
+      attr: { points: paths.path1 },
       ease: "power2.inOut",
     });
+
     gsap.to(elements.morphPath2, {
-      duration: 0.3,
-      attr: { points: path2 },
+      duration: playing ? 0.5 : 0.3,
+      attr: { points: paths.path2 },
       ease: "power2.inOut",
     });
 
-    isPlaying = false;
-    if (elements.videoControlsText)
-      elements.videoControlsText.textContent = "PLAY";
-    if (elements.videoIndicator)
-      elements.videoIndicator.style.borderBottomColor = "";
-
-    if (hideTimeout) {
-      clearTimeout(hideTimeout);
-      hideTimeout = null;
+    // Mise à jour de l'interface
+    state.isPlaying = playing;
+    if (elements.videoControlsText) {
+      elements.videoControlsText.textContent = playing ? "PAUSE" : "PLAY";
     }
-    showTextElements();
-    showControlElements();
-  };
+    if (elements.videoIndicator) {
+      elements.videoIndicator.style.borderBottomColor = playing ? "red" : "";
+    }
 
-  const updateToPauseState = () => {
-    const { path1, path2 } = SVG_PATHS.pause;
-    gsap.to(elements.morphPath1, {
-      duration: 0.5,
-      attr: { points: path1 },
-      ease: "power2.inOut",
-    });
-    gsap.to(elements.morphPath2, {
-      duration: 0.5,
-      attr: { points: path2 },
-      ease: "power2.inOut",
-    });
+    // Gestion des timeouts
+    if (state.hideTimeout) {
+      clearTimeout(state.hideTimeout);
+      state.hideTimeout = null;
+    }
 
-    isPlaying = true;
-    if (elements.videoControlsText)
-      elements.videoControlsText.textContent = "PAUSE";
-    if (elements.videoIndicator)
-      elements.videoIndicator.style.borderBottomColor = "red";
-
-    hideTimeout = setTimeout(() => {
-      hideTextElements();
-      hideControlElements();
-    }, 3000);
+    if (playing) {
+      state.hideTimeout = setTimeout(() => showHideElements(false), 3000);
+    } else {
+      showHideElements(true);
+    }
   };
 
   const togglePlayback = async () => {
     try {
-      if (isPlaying) {
-        updateToPlayState();
+      if (state.isPlaying) {
         elements.video.pause();
       } else {
-        updateToPauseState();
         await elements.video.play();
       }
     } catch (error) {
       console.error("Erreur lors de la lecture de la vidéo:", error);
-      updateToPlayState(); // Reset en cas d'erreur
+      updatePlayerState(false);
     }
   };
 
-  // Event listeners optimisés
-  const handleVideoClick = () => togglePlayback();
-
-  const handleMouseEnter = () => {
-    isHovering = true;
-    showTextElements();
-    showControlElements();
-  };
-
-  const handleMouseLeave = () => {
-    isHovering = false;
-    if (isPlaying) {
-      if (hideTimeout) clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(() => {
-        hideTextElements();
-        hideControlElements();
-      }, 3000);
-    }
-  };
-
-  const handlePlay = () => {
-    if (!isPlaying) updateToPauseState();
-  };
-
-  const handlePause = () => {
-    if (isPlaying) updateToPlayState();
-  };
-
-  const handleTimeUpdate = () => {
-    if (elements.video && elements.videoDuration) {
-      const remainingTime =
-        elements.video.duration - elements.video.currentTime;
-      elements.videoDuration.textContent = formatTime(remainingTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (elements.videoDuration && elements.video.duration) {
-      elements.videoDuration.textContent = formatTime(elements.video.duration);
-    }
+  // Event handlers optimisés
+  const handlers = {
+    click: () => togglePlayback(),
+    mouseenter: () => {
+      state.isHovering = true;
+      showHideElements(true);
+    },
+    mouseleave: () => {
+      state.isHovering = false;
+      if (state.isPlaying) {
+        if (state.hideTimeout) clearTimeout(state.hideTimeout);
+        state.hideTimeout = setTimeout(() => showHideElements(false), 3000);
+      }
+    },
+    play: () => {
+      if (!state.isPlaying) updatePlayerState(true);
+    },
+    pause: () => {
+      if (state.isPlaying) updatePlayerState(false);
+    },
+    timeupdate: () => {
+      if (elements.video && elements.videoDuration) {
+        const remainingTime =
+          elements.video.duration - elements.video.currentTime;
+        elements.videoDuration.textContent = formatTime(remainingTime);
+      }
+    },
+    loadedmetadata: () => {
+      if (elements.videoDuration && elements.video.duration) {
+        elements.videoDuration.textContent = formatTime(
+          elements.video.duration
+        );
+      }
+    },
   };
 
   // Initialisation
   elements.morphPath1.setAttribute("points", SVG_PATHS.play.path1);
   elements.morphPath2.setAttribute("points", SVG_PATHS.play.path2);
-  if (elements.videoControlsText)
+  if (elements.videoControlsText) {
     elements.videoControlsText.textContent = "PLAY";
+  }
 
-  // Ajout des event listeners
-  elements.video.addEventListener("click", handleVideoClick);
-  elements.video.addEventListener("mouseenter", handleMouseEnter);
-  elements.video.addEventListener("mouseleave", handleMouseLeave);
-  elements.video.addEventListener("play", handlePlay);
-  elements.video.addEventListener("pause", handlePause);
-  elements.video.addEventListener("timeupdate", handleTimeUpdate);
-  elements.video.addEventListener("loadedmetadata", handleLoadedMetadata);
+  // Ajout des event listeners avec options optimisées
+  Object.entries(handlers).forEach(([event, handler]) => {
+    elements.video.addEventListener(event, handler, { passive: true });
+  });
 
   // Initialisation de la durée si déjà chargée
   if (elements.video.duration) {
-    handleLoadedMetadata();
+    handlers.loadedmetadata();
   }
 
-  // Cleanup function
   const cleanup = () => {
-    if (hideTimeout) clearTimeout(hideTimeout);
-    elements.video.removeEventListener("click", handleVideoClick);
-    elements.video.removeEventListener("mouseenter", handleMouseEnter);
-    elements.video.removeEventListener("mouseleave", handleMouseLeave);
-    elements.video.removeEventListener("play", handlePlay);
-    elements.video.removeEventListener("pause", handlePause);
-    elements.video.removeEventListener("timeupdate", handleTimeUpdate);
-    elements.video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    if (state.hideTimeout) clearTimeout(state.hideTimeout);
+    Object.entries(handlers).forEach(([event, handler]) => {
+      elements.video.removeEventListener(event, handler);
+    });
   };
 
   return {
-    play: updateToPauseState,
-    pause: updateToPlayState,
+    play: () => updatePlayerState(true),
+    pause: () => updatePlayerState(false),
     toggle: togglePlayback,
-    isPlaying: () => isPlaying,
+    isPlaying: () => state.isPlaying,
     cleanup,
   };
 }
@@ -466,27 +424,25 @@ function highlightCurrentPageDot() {
     window.location.pathname.split("/").pop().replace(".html", "") ||
     "home_page_no_dot";
 
-  // Reset tous les dots
-  document.querySelectorAll(".header-item_dot").forEach((dot) => {
-    dot.classList.remove("active-dot");
-  });
+  // Batch DOM updates
+  const dots = document.querySelectorAll(".header-item_dot");
+  dots.forEach((dot) => dot.classList.remove("active-dot"));
 
-  // Active le dot correspondant
   if (["projects", "about", "lab"].includes(pageName)) {
     const targetDot = document.getElementById(`${pageName}-dot`);
     targetDot?.classList.add("active-dot");
   }
 }
+
 function initHeaderAnimation() {
   const logo = document.querySelector(".header-logo");
   const navItems = gsap.utils.toArray(".header_list-item");
 
   if (!logo && navItems.length === 0) return;
 
-  // Reset styles précédents
+  // Clear previous animations
   gsap.set([logo, ...navItems], { clearProps: "all" });
 
-  // Animation initiale
   const timeline = gsap.timeline({
     defaults: { overwrite: "auto", ease: EASES.reveal },
   });
@@ -497,7 +453,7 @@ function initHeaderAnimation() {
   }
 
   if (navItems.length > 0) {
-    gsap.set(navItems, { y: "100%" });
+    gsap.set(navItems, { y: "200%" });
     timeline.to(
       navItems,
       {
@@ -510,6 +466,7 @@ function initHeaderAnimation() {
   }
 }
 
+// Observer optimisé avec gestion d'état
 function setupHeaderVisibilityObserver() {
   const headerNav = document.querySelector(".header-nav");
   if (!headerNav) return;
@@ -518,30 +475,27 @@ function setupHeaderVisibilityObserver() {
   let resizeObserver;
 
   const handleResize = (entries) => {
-    for (const entry of entries) {
-      const isVisible = entry.contentRect.height > 0;
+    const entry = entries[0];
+    const isVisible = entry.contentRect.height > 0;
 
-      if (isVisible && !isAnimated) {
-        isAnimated = true;
-        requestAnimationFrame(() => initHeaderAnimation());
-      } else if (!isVisible && isAnimated) {
-        isAnimated = false;
-        const logo = document.querySelector(".header-logo");
-        const navItems = gsap.utils.toArray(".header_list-item");
-        gsap.set([logo, ...navItems], { clearProps: "all" });
-      }
+    if (isVisible && !isAnimated) {
+      isAnimated = true;
+      requestAnimationFrame(() => initHeaderAnimation());
+    } else if (!isVisible && isAnimated) {
+      isAnimated = false;
+      const elements = [
+        document.querySelector(".header-logo"),
+        ...gsap.utils.toArray(".header_list-item"),
+      ];
+      gsap.set(elements, { clearProps: "all" });
     }
   };
 
   resizeObserver = new ResizeObserver(handleResize);
   resizeObserver.observe(headerNav);
 
-  // Cleanup function
   return () => {
-    if (resizeObserver) {
-      resizeObserver.disconnect();
-      resizeObserver = null;
-    }
+    resizeObserver?.disconnect();
   };
 }
 
@@ -642,56 +596,104 @@ function initSplitTextAnimations() {
   });
 }
 
+// Gestion des animations de cartes optimisée
 function manageCardHoverAnimations() {
-  gsap.utils.toArray(".home-work_card-visual").forEach((t) => {
-    t._hoverTimeline?.kill();
-    t.removeEventListener("mouseenter", t._mouseEnterHandler);
-    t.removeEventListener("mouseleave", t._mouseLeaveHandler);
-    const o = t.querySelector(".card-label_path"),
-      n = t.querySelector(".card-label_text");
-    if (!o || !n) return;
-    gsap.set(n, { opacity: 0, y: "20%" });
-    gsap.set(o, { drawSVG: "0%" });
-    const e = gsap
-      .timeline({ paused: !0 })
-      .to(o, {
+  const cards = gsap.utils.toArray(".home-work_card-visual");
+
+  cards.forEach((card) => {
+    // Cleanup des anciens event listeners
+    if (card._cleanup) {
+      card._cleanup();
+    }
+
+    const pathElement = card.querySelector(".card-label_path");
+    const textElement = card.querySelector(".card-label_text");
+
+    if (!pathElement || !textElement) return;
+
+    // État initial
+    gsap.set([textElement, pathElement], {
+      opacity: 0,
+      y: "20%",
+      drawSVG: "0%",
+    });
+
+    // Timeline réutilisable
+    const timeline = gsap
+      .timeline({ paused: true })
+      .to(pathElement, {
         drawSVG: "100%",
         duration: 0.75,
         ease: CustomEase.create("custom", "M0,0 C0.45,0 0,1 1,1"),
       })
       .to(
-        n,
-        { opacity: 1, y: "0%", duration: 0.3, ease: EASES.reveal },
+        textElement,
+        {
+          opacity: 1,
+          y: "0%",
+          duration: 0.3,
+          ease: EASES.reveal,
+        },
         "<0.2"
       );
-    t._hoverTimeline = e;
-    t._mouseEnterHandler = () => e.play();
-    t._mouseLeaveHandler = () => e.reverse();
-    t.addEventListener("mouseenter", t._mouseEnterHandler);
-    t.addEventListener("mouseleave", t._mouseLeaveHandler);
+
+    // Event handlers
+    const handleMouseEnter = () => timeline.play();
+    const handleMouseLeave = () => timeline.reverse();
+
+    card.addEventListener("mouseenter", handleMouseEnter, { passive: true });
+    card.addEventListener("mouseleave", handleMouseLeave, { passive: true });
+
+    // Fonction de cleanup
+    card._cleanup = () => {
+      timeline.kill();
+      card.removeEventListener("mouseenter", handleMouseEnter);
+      card.removeEventListener("mouseleave", handleMouseLeave);
+    };
   });
 }
 
 function initHomeHeroAnimations() {
-  const e = document.querySelector(".home-hero_path"),
-    t = document.querySelector(".home-hero_text"),
-    o = document.querySelector(".main-cta");
-  if (!e || !t) return;
-  const n = gsap.timeline({ delay: 1.5 });
-  n.from(e, {
-    drawSVG: "0%",
-    autoAlpha: 0,
-    duration: 0.75,
-    ease: CustomEase.create("custom", "M0,0 C0.45,0 0,1 1,1"),
-  });
-  n.from(
-    t,
-    { y: "20%", autoAlpha: 0, duration: 0.75, ease: EASES.reveal },
-    "<0.1"
-  );
-  if (o) gsap.to(o, { y: "0%", duration: 0.75, ease: EASES.reveal });
+  const heroPath = document.querySelector(".home-hero_path");
+  const heroText = document.querySelector(".home-hero_text");
+  const mainCta = document.querySelector(".main-cta");
+
+  if (!heroPath || !heroText) return;
+
+  const timeline = gsap.timeline({ delay: 1.5 });
+
+  timeline
+    .from(heroPath, {
+      drawSVG: "0%",
+      autoAlpha: 0,
+      duration: 0.75,
+      ease: CustomEase.create("custom", "M0,0 C0.45,0 0,1 1,1"),
+    })
+    .from(
+      heroText,
+      {
+        y: "20%",
+        autoAlpha: 0,
+        duration: 0.75,
+        ease: EASES.reveal,
+      },
+      "<0.1"
+    );
+
+  if (mainCta) {
+    timeline.to(
+      mainCta,
+      {
+        y: "0%",
+        duration: 0.75,
+        ease: EASES.reveal,
+      },
+      "<"
+    );
+  }
 }
 
+// ViewSwitcher optimisé avec gestion d'état
 function initViewSwitcher() {
   const gridBtn = document.querySelector(".btn-view-grid");
   const indexBtn = document.querySelector(".btn-view-index");
@@ -701,36 +703,43 @@ function initViewSwitcher() {
 
   if (!gridBtn || !indexBtn || !gridView || !indexView || !container) return;
 
-  const buttons = [gridBtn, indexBtn];
-  let currentView = "grid"; // État initial
+  const state = {
+    currentView: "grid",
+    isTransitioning: false,
+  };
 
-  // Définir l'état initial
+  // État initial
   gridBtn.classList.add("is-active");
 
   const switchView = (targetView, targetElement, currentElement) => {
-    if (currentView === targetView) return;
+    if (state.currentView === targetView || state.isTransitioning) return;
 
-    // Mesure des hauteurs
-    gsap.set(targetElement, {
-      position: "relative",
-      visibility: "hidden",
-      opacity: 1,
-    });
-    const targetHeight = targetElement.offsetHeight;
+    state.isTransitioning = true;
 
-    gsap.set(targetElement, {
-      position: "absolute",
-      visibility: "hidden",
-      opacity: 0,
-    });
+    // Mesure des hauteurs optimisée
+    const measurements = {
+      target: (() => {
+        gsap.set(targetElement, {
+          position: "relative",
+          visibility: "hidden",
+          opacity: 1,
+        });
+        const height = targetElement.offsetHeight;
+        gsap.set(targetElement, {
+          position: "absolute",
+          visibility: "hidden",
+          opacity: 0,
+        });
+        return height;
+      })(),
+      current: currentElement.offsetHeight,
+    };
 
-    const currentHeight = currentElement.offsetHeight;
-
-    // Configuration initiale pour l'animation
-    gsap.set(container, { height: currentHeight });
+    // Configuration pour l'animation
+    gsap.set(container, { height: measurements.current });
     gsap.set([targetElement, currentElement], { position: "absolute" });
 
-    // Animation de transition
+    // Animation optimisée
     const timeline = gsap.timeline({
       onComplete: () => {
         gsap.set(targetElement, {
@@ -739,64 +748,55 @@ function initViewSwitcher() {
         });
         gsap.set(container, { clearProps: "height" });
         gsap.set(currentElement, { visibility: "hidden" });
+
+        state.currentView = targetView;
+        state.isTransitioning = false;
+
         ScrollTrigger.refresh();
       },
     });
 
     timeline
       .to(container, {
-        height: targetHeight,
+        height: measurements.target,
         duration: 0.4,
         ease: "power2.inOut",
       })
-      .to(
-        currentElement,
-        {
-          opacity: 0,
-          duration: 0.3,
-        },
-        0
-      )
+      .to(currentElement, { opacity: 0, duration: 0.3 }, 0)
       .to(
         targetElement,
-        {
-          opacity: 1,
-          visibility: "visible",
-          duration: 0.3,
-        },
+        { opacity: 1, visibility: "visible", duration: 0.3 },
         0.1
       );
-
-    currentView = targetView;
   };
 
-  // Event listeners optimisés
+  // Event handlers optimisés
   const handleGridClick = () => {
-    if (currentView !== "grid") {
-      buttons.forEach((btn) => btn.classList.remove("is-active"));
+    if (state.currentView !== "grid") {
+      [gridBtn, indexBtn].forEach((btn) => btn.classList.remove("is-active"));
       gridBtn.classList.add("is-active");
       switchView("grid", gridView, indexView);
     }
   };
 
   const handleIndexClick = () => {
-    if (currentView !== "index") {
-      buttons.forEach((btn) => btn.classList.remove("is-active"));
+    if (state.currentView !== "index") {
+      [gridBtn, indexBtn].forEach((btn) => btn.classList.remove("is-active"));
       indexBtn.classList.add("is-active");
       switchView("index", indexView, gridView);
     }
   };
 
-  gridBtn.addEventListener("click", handleGridClick);
-  indexBtn.addEventListener("click", handleIndexClick);
+  gridBtn.addEventListener("click", handleGridClick, { passive: true });
+  indexBtn.addEventListener("click", handleIndexClick, { passive: true });
 
-  // Cleanup function
   return () => {
     gridBtn.removeEventListener("click", handleGridClick);
     indexBtn.removeEventListener("click", handleIndexClick);
   };
 }
 
+// Lab Gallery optimisé avec gestion des gaps
 function initLabGallery() {
   const galleryContainer = document.querySelector(".lab-gallery_content");
   if (!galleryContainer) return;
@@ -806,27 +806,25 @@ function initLabGallery() {
   );
   if (gridItems.length === 0) return;
 
-  function buildColumns() {
-    // --- MODIFICATION 1 : Lire les styles de la grille AVANT de la modifier ---
-    const computedStyles = window.getComputedStyle(galleryContainer);
+  const buildColumns = () => {
+    // Lecture des styles avant modification
+    const computedStyles = getComputedStyle(galleryContainer);
     const numColumns = computedStyles
       .getPropertyValue("grid-template-columns")
       .split(" ")
-      .filter((val) => "0px" !== val && val).length;
+      .filter((val) => val && val !== "0px").length;
 
     if (numColumns === 0) return;
 
-    // On récupère les valeurs de gap pour les réappliquer plus tard
-    const verticalGap = computedStyles.getPropertyValue("row-gap");
-    const horizontalGap = computedStyles.getPropertyValue("column-gap");
+    const { rowGap, columnGap } = computedStyles;
 
-    // --- Fin de la modification 1 ---
-
+    // Construction des colonnes
     const columnsData = Array.from({ length: numColumns }, () => []);
     gridItems.forEach((item, index) => {
       columnsData[index % numColumns].push(item);
     });
 
+    // Création du fragment optimisé
     const fragment = document.createDocumentFragment();
     const centerIndex = (numColumns - 1) / 2;
     const smootherEffects = [];
@@ -834,36 +832,30 @@ function initLabGallery() {
     columnsData.forEach((items, index) => {
       const column = document.createElement("div");
       column.className = "lab-gallery_column";
-
-      // --- MODIFICATION 2 : Appliquer le gap vertical à chaque nouvelle colonne ---
-      // Pour que le gap fonctionne, la colonne doit être un conteneur (flex ou grid)
-      column.style.display = "flex";
-      column.style.flexDirection = "column";
-      column.style.gap = verticalGap; // Applique l'espacement entre les items de la colonne
-      // --- Fin de la modification 2 ---
+      column.style.cssText = `display: flex; flex-direction: column; gap: ${rowGap}`;
 
       items.forEach((item) => column.appendChild(item));
       fragment.appendChild(column);
 
-      const lag = 0 + 0.05 * Math.abs(index - centerIndex);
-      smootherEffects.push({ element: column, lag: lag });
+      // Calcul du lag pour smoother
+      const lag = 0.05 * Math.abs(index - centerIndex);
+      smootherEffects.push({ element: column, lag });
     });
 
+    // Mise à jour du DOM
     galleryContainer.innerHTML = "";
     galleryContainer.appendChild(fragment);
+    galleryContainer.style.cssText = `display: flex; gap: ${columnGap}`;
 
-    // --- MODIFICATION 3 : Appliquer le gap horizontal entre les colonnes ---
-    galleryContainer.style.display = "flex";
-    galleryContainer.style.gap = horizontalGap; // Applique l'espacement entre les colonnes
-    // --- Fin de la modification 3 ---
-
+    // Application des effets smoother
     if (smoother) {
       smootherEffects.forEach(({ element, lag }) => {
-        smoother.effects(element, { speed: 1, lag: lag });
+        smoother.effects(element, { speed: 1, lag });
       });
     }
+
     galleryContainer.classList.add("gallery-is-ready");
-  }
+  };
 
   document.fonts.ready.then(() => {
     setTimeout(buildColumns, 50);
