@@ -92,7 +92,6 @@ function initMenu() {
   gsap.set(menuElement, { x: "100%" });
   let isMenuOpen = false;
 
-  // Cache des éléments avec sélection optimisée
   let elements = menuElementsCache.get(menuElement);
   if (!elements) {
     elements = {
@@ -105,7 +104,6 @@ function initMenu() {
     menuElementsCache.set(menuElement, elements);
   }
 
-  // Fonction utilitaire pour les mises à jour d'état
   const updateMenuState = (open) => {
     isMenuOpen = open;
     document.body.classList.toggle("menu-open", open);
@@ -113,7 +111,6 @@ function initMenu() {
     triggerElement.setAttribute("aria-expanded", open);
   };
 
-  // Timeline d'ouverture optimisée
   const openTimeline = gsap
     .timeline({
       paused: true,
@@ -139,7 +136,6 @@ function initMenu() {
       "<0.2"
     );
 
-  // Timeline de fermeture optimisée
   const closeTimeline = gsap
     .timeline({
       paused: true,
@@ -160,13 +156,23 @@ function initMenu() {
     openTimeline.restart();
   };
 
-  const closeMenu = () => {
+  const closeMenu = (instant = false) => {
     if (!isMenuOpen) return;
     openTimeline.pause();
-    closeTimeline.restart();
+
+    if (instant) {
+      // Fermeture instantanée sans animation via gsap.set()
+      updateMenuState(false);
+      gsap.set(menuElement, { x: "100%" });
+      gsap.set(backgroundOverlay, { opacity: 0 });
+      gsap.set(elements.triggerText, { y: "0%" });
+      closeTimeline.pause(0); // Réinitialise la timeline au cas où
+    } else {
+      // Fermeture avec animation (comportement normal)
+      closeTimeline.restart();
+    }
   };
 
-  // Gestion des événements optimisée avec délégation
   const handleClick = (event) => {
     if (triggerElement.contains(event.target)) {
       event.stopPropagation();
@@ -182,7 +188,6 @@ function initMenu() {
     }
   };
 
-  // Stockage des callbacks pour le cleanup
   const callbacks = { handleClick, handleKeydown };
   menuCallbacks.set(menuElement, callbacks);
 
@@ -214,7 +219,6 @@ function resetWebflow() {
   }
 }
 
-// Video player optimisé avec gestion d'état centralisée
 function initVideoPlayer() {
   const elements = {
     morphPath1: document.getElementById("morphPath1"),
@@ -229,7 +233,6 @@ function initVideoPlayer() {
     video: document.querySelector("video"),
   };
 
-  // Early return optimisé
   if (!elements.video || !elements.morphPath1 || !elements.morphPath2) {
     return {
       play: () => {},
@@ -240,14 +243,12 @@ function initVideoPlayer() {
     };
   }
 
-  // État centralisé
   const state = {
     isPlaying: false,
     hideTimeout: null,
     isHovering: false,
   };
 
-  // Utilitaires optimisés
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -256,16 +257,10 @@ function initVideoPlayer() {
       .padStart(2, "0")}`;
   };
 
-  // Gestion optimisée de la visibilité avec batch updates
   const updateVisibility = (elementsArray, opacity, duration = 0.5) => {
     const validElements = elementsArray.filter(Boolean);
     if (validElements.length === 0) return;
-
-    gsap.to(validElements, {
-      duration,
-      opacity,
-      ease: "power2.out",
-    });
+    gsap.to(validElements, { duration, opacity, ease: "power2.out" });
   };
 
   const showHideElements = (show) => {
@@ -275,17 +270,14 @@ function initVideoPlayer() {
       elements.videoIdBtm,
       elements.videoControls,
     ];
-
     if (show || !state.isHovering) {
       updateVisibility(textElements, show ? 1 : 0);
     }
-
     if (show || (!state.isHovering && state.isPlaying)) {
       updateVisibility(controlElements, show ? 1 : 0);
     }
   };
 
-  // Constantes pour les paths SVG
   const SVG_PATHS = {
     play: {
       path1: "5 2.5 5 12 5 21.5 5 21.5 21 12 5 2.5 5 2.5",
@@ -297,25 +289,19 @@ function initVideoPlayer() {
     },
   };
 
-  // Mise à jour d'état optimisée
   const updatePlayerState = (playing) => {
     const paths = SVG_PATHS[playing ? "pause" : "play"];
     const duration = playing ? 0.5 : 0.5;
-
-    // Animation des paths en parallèle
     gsap.to(elements.morphPath1, {
       duration,
       attr: { points: paths.path1 },
       ease: "power2.inOut",
     });
-
     gsap.to(elements.morphPath2, {
       duration: playing ? 0.5 : 0.3,
       attr: { points: paths.path2 },
       ease: "power2.inOut",
     });
-
-    // Mise à jour de l'interface
     state.isPlaying = playing;
     if (elements.videoControlsText) {
       elements.videoControlsText.textContent = playing ? "PAUSE" : "PLAY";
@@ -323,13 +309,10 @@ function initVideoPlayer() {
     if (elements.videoIndicator) {
       elements.videoIndicator.style.borderBottomColor = playing ? "red" : "";
     }
-
-    // Gestion des timeouts
     if (state.hideTimeout) {
       clearTimeout(state.hideTimeout);
       state.hideTimeout = null;
     }
-
     if (playing) {
       state.hideTimeout = setTimeout(() => showHideElements(false), 3000);
     } else {
@@ -350,7 +333,6 @@ function initVideoPlayer() {
     }
   };
 
-  // Event handlers optimisés
   const handlers = {
     click: () => togglePlayback(),
     mouseenter: () => {
@@ -386,19 +368,16 @@ function initVideoPlayer() {
     },
   };
 
-  // Initialisation
   elements.morphPath1.setAttribute("points", SVG_PATHS.play.path1);
   elements.morphPath2.setAttribute("points", SVG_PATHS.play.path2);
   if (elements.videoControlsText) {
     elements.videoControlsText.textContent = "PLAY";
   }
 
-  // Ajout des event listeners avec options optimisées
   Object.entries(handlers).forEach(([event, handler]) => {
     elements.video.addEventListener(event, handler, { passive: true });
   });
 
-  // Initialisation de la durée si déjà chargée
   if (elements.video.duration) {
     handlers.loadedmetadata();
   }
@@ -423,8 +402,6 @@ function highlightCurrentPageDot() {
   const pageName =
     window.location.pathname.split("/").pop().replace(".html", "") ||
     "home_page_no_dot";
-
-  // Batch DOM updates
   const dots = document.querySelectorAll(".header-item_dot");
   dots.forEach((dot) => dot.classList.remove("active-dot"));
 
@@ -437,12 +414,9 @@ function highlightCurrentPageDot() {
 function initHeaderAnimation() {
   const logo = document.querySelector(".header-logo");
   const navItems = gsap.utils.toArray(".header_list-item");
-
   if (!logo && navItems.length === 0) return;
 
-  // Clear previous animations
   gsap.set([logo, ...navItems], { clearProps: "all" });
-
   const timeline = gsap.timeline({
     defaults: { overwrite: "auto", ease: EASES.reveal },
   });
@@ -456,17 +430,12 @@ function initHeaderAnimation() {
     gsap.set(navItems, { y: "200%" });
     timeline.to(
       navItems,
-      {
-        y: "0%",
-        duration: 0.5,
-        stagger: 0.1,
-      },
+      { y: "0%", duration: 0.5, stagger: 0.1 },
       logo ? "<0.2" : 0
     );
   }
 }
 
-// Observer optimisé avec gestion d'état
 function setupHeaderVisibilityObserver() {
   const headerNav = document.querySelector(".header-nav");
   if (!headerNav) return;
@@ -477,7 +446,6 @@ function setupHeaderVisibilityObserver() {
   const handleResize = (entries) => {
     const entry = entries[0];
     const isVisible = entry.contentRect.height > 0;
-
     if (isVisible && !isAnimated) {
       isAnimated = true;
       requestAnimationFrame(() => initHeaderAnimation());
@@ -499,7 +467,6 @@ function setupHeaderVisibilityObserver() {
   };
 }
 
-// FONCTION SPLITTEXT RESTAURÉE À L'ORIGINAL
 function initSplitTextAnimations() {
   if (isTouchMobile) {
     document
@@ -596,60 +563,33 @@ function initSplitTextAnimations() {
   });
 }
 
-// Gestion des animations de cartes optimisée
 function manageCardHoverAnimations() {
-  const cards = gsap.utils.toArray(".home-work_card-visual");
-
-  cards.forEach((card) => {
-    // Cleanup des anciens event listeners
-    if (card._cleanup) {
-      card._cleanup();
-    }
-
-    const pathElement = card.querySelector(".card-label_path");
-    const textElement = card.querySelector(".card-label_text");
-
-    if (!pathElement || !textElement) return;
-
-    // État initial
-    gsap.set([textElement, pathElement], {
-      opacity: 0,
-      y: "20%",
-      drawSVG: "0%",
-    });
-
-    // Timeline réutilisable
-    const timeline = gsap
-      .timeline({ paused: true })
-      .to(pathElement, {
+  gsap.utils.toArray(".home-work_card-visual").forEach((t) => {
+    t._hoverTimeline?.kill();
+    t.removeEventListener("mouseenter", t._mouseEnterHandler);
+    t.removeEventListener("mouseleave", t._mouseLeaveHandler);
+    const o = t.querySelector(".card-label_path"),
+      n = t.querySelector(".card-label_text");
+    if (!o || !n) return;
+    gsap.set(n, { opacity: 0, y: "20%" });
+    gsap.set(o, { drawSVG: "0%" });
+    const e = gsap
+      .timeline({ paused: !0 })
+      .to(o, {
         drawSVG: "100%",
         duration: 0.75,
         ease: CustomEase.create("custom", "M0,0 C0.45,0 0,1 1,1"),
       })
       .to(
-        textElement,
-        {
-          opacity: 1,
-          y: "0%",
-          duration: 0.3,
-          ease: EASES.reveal,
-        },
+        n,
+        { opacity: 1, y: "0%", duration: 0.3, ease: EASES.reveal },
         "<0.2"
       );
-
-    // Event handlers
-    const handleMouseEnter = () => timeline.play();
-    const handleMouseLeave = () => timeline.reverse();
-
-    card.addEventListener("mouseenter", handleMouseEnter, { passive: true });
-    card.addEventListener("mouseleave", handleMouseLeave, { passive: true });
-
-    // Fonction de cleanup
-    card._cleanup = () => {
-      timeline.kill();
-      card.removeEventListener("mouseenter", handleMouseEnter);
-      card.removeEventListener("mouseleave", handleMouseLeave);
-    };
+    t._hoverTimeline = e;
+    t._mouseEnterHandler = () => e.play();
+    t._mouseLeaveHandler = () => e.reverse();
+    t.addEventListener("mouseenter", t._mouseEnterHandler);
+    t.addEventListener("mouseleave", t._mouseLeaveHandler);
   });
 }
 
@@ -657,11 +597,9 @@ function initHomeHeroAnimations() {
   const heroPath = document.querySelector(".home-hero_path");
   const heroText = document.querySelector(".home-hero_text");
   const mainCta = document.querySelector(".main-cta");
-
   if (!heroPath || !heroText) return;
 
   const timeline = gsap.timeline({ delay: 1.5 });
-
   timeline
     .from(heroPath, {
       drawSVG: "0%",
@@ -671,132 +609,14 @@ function initHomeHeroAnimations() {
     })
     .from(
       heroText,
-      {
-        y: "20%",
-        autoAlpha: 0,
-        duration: 0.75,
-        ease: EASES.reveal,
-      },
+      { y: "20%", autoAlpha: 0, duration: 0.75, ease: EASES.reveal },
       "<0.1"
     );
-
   if (mainCta) {
-    timeline.to(
-      mainCta,
-      {
-        y: "0%",
-        duration: 0.75,
-        ease: EASES.reveal,
-      },
-      "<"
-    );
+    timeline.to(mainCta, { y: "0%", duration: 0.75, ease: EASES.reveal }, "<");
   }
 }
 
-// ViewSwitcher optimisé avec gestion d'état
-function initViewSwitcher() {
-  const gridBtn = document.querySelector(".btn-view-grid");
-  const indexBtn = document.querySelector(".btn-view-index");
-  const gridView = document.querySelector(".work-grid");
-  const indexView = document.querySelector(".work-index");
-  const container = document.querySelector(".work-views-container");
-
-  if (!gridBtn || !indexBtn || !gridView || !indexView || !container) return;
-
-  const state = {
-    currentView: "grid",
-    isTransitioning: false,
-  };
-
-  // État initial
-  gridBtn.classList.add("is-active");
-
-  const switchView = (targetView, targetElement, currentElement) => {
-    if (state.currentView === targetView || state.isTransitioning) return;
-
-    state.isTransitioning = true;
-
-    // Mesure des hauteurs optimisée
-    const measurements = {
-      target: (() => {
-        gsap.set(targetElement, {
-          position: "relative",
-          visibility: "hidden",
-          opacity: 1,
-        });
-        const height = targetElement.offsetHeight;
-        gsap.set(targetElement, {
-          position: "absolute",
-          visibility: "hidden",
-          opacity: 0,
-        });
-        return height;
-      })(),
-      current: currentElement.offsetHeight,
-    };
-
-    // Configuration pour l'animation
-    gsap.set(container, { height: measurements.current });
-    gsap.set([targetElement, currentElement], { position: "absolute" });
-
-    // Animation optimisée
-    const timeline = gsap.timeline({
-      onComplete: () => {
-        gsap.set(targetElement, {
-          position: "relative",
-          clearProps: "height,width,top,left",
-        });
-        gsap.set(container, { clearProps: "height" });
-        gsap.set(currentElement, { visibility: "hidden" });
-
-        state.currentView = targetView;
-        state.isTransitioning = false;
-
-        ScrollTrigger.refresh();
-      },
-    });
-
-    timeline
-      .to(container, {
-        height: measurements.target,
-        duration: 0.4,
-        ease: "power2.inOut",
-      })
-      .to(currentElement, { opacity: 0, duration: 0.3 }, 0)
-      .to(
-        targetElement,
-        { opacity: 1, visibility: "visible", duration: 0.3 },
-        0.1
-      );
-  };
-
-  // Event handlers optimisés
-  const handleGridClick = () => {
-    if (state.currentView !== "grid") {
-      [gridBtn, indexBtn].forEach((btn) => btn.classList.remove("is-active"));
-      gridBtn.classList.add("is-active");
-      switchView("grid", gridView, indexView);
-    }
-  };
-
-  const handleIndexClick = () => {
-    if (state.currentView !== "index") {
-      [gridBtn, indexBtn].forEach((btn) => btn.classList.remove("is-active"));
-      indexBtn.classList.add("is-active");
-      switchView("index", indexView, gridView);
-    }
-  };
-
-  gridBtn.addEventListener("click", handleGridClick, { passive: true });
-  indexBtn.addEventListener("click", handleIndexClick, { passive: true });
-
-  return () => {
-    gridBtn.removeEventListener("click", handleGridClick);
-    indexBtn.removeEventListener("click", handleIndexClick);
-  };
-}
-
-// Lab Gallery optimisé avec gestion des gaps
 function initLabGallery() {
   const galleryContainer = document.querySelector(".lab-gallery_content");
   if (!galleryContainer) return;
@@ -807,24 +627,19 @@ function initLabGallery() {
   if (gridItems.length === 0) return;
 
   const buildColumns = () => {
-    // Lecture des styles avant modification
     const computedStyles = getComputedStyle(galleryContainer);
     const numColumns = computedStyles
       .getPropertyValue("grid-template-columns")
       .split(" ")
       .filter((val) => val && val !== "0px").length;
-
     if (numColumns === 0) return;
 
     const { rowGap, columnGap } = computedStyles;
-
-    // Construction des colonnes
     const columnsData = Array.from({ length: numColumns }, () => []);
     gridItems.forEach((item, index) => {
       columnsData[index % numColumns].push(item);
     });
 
-    // Création du fragment optimisé
     const fragment = document.createDocumentFragment();
     const centerIndex = (numColumns - 1) / 2;
     const smootherEffects = [];
@@ -833,27 +648,21 @@ function initLabGallery() {
       const column = document.createElement("div");
       column.className = "lab-gallery_column";
       column.style.cssText = `display: flex; flex-direction: column; gap: ${rowGap}`;
-
       items.forEach((item) => column.appendChild(item));
       fragment.appendChild(column);
-
-      // Calcul du lag pour smoother
       const lag = 0.05 * Math.abs(index - centerIndex);
       smootherEffects.push({ element: column, lag });
     });
 
-    // Mise à jour du DOM
     galleryContainer.innerHTML = "";
     galleryContainer.appendChild(fragment);
     galleryContainer.style.cssText = `display: flex; gap: ${columnGap}`;
 
-    // Application des effets smoother
     if (smoother) {
       smootherEffects.forEach(({ element, lag }) => {
         smoother.effects(element, { speed: 1, lag });
       });
     }
-
     galleryContainer.classList.add("gallery-is-ready");
   };
 
@@ -862,7 +671,6 @@ function initLabGallery() {
   });
 }
 
-// FONCTION REGROUPANT LES AUTRES ANIMATIONS DÉPENDANTES DU SCROLL
 function initializeScrollDependentAnimations() {
   if (isTouchMobile) {
     gsap.set('[data-anim-stroke="true"]', { "--stroke-width": "100%" });
@@ -917,7 +725,6 @@ function initializePageSetup() {
   initSplitTextAnimations();
   manageCardHoverAnimations();
   initHomeHeroAnimations();
-  initViewSwitcher();
   initLabGallery();
   initializeScrollDependentAnimations();
 }
@@ -946,14 +753,10 @@ function updateContent(doc) {
   const oldContent = document.querySelector("#main-content");
 
   if (newContent && oldContent) {
-    // Optimisation: clonage pour éviter les problèmes de référence
     oldContent.innerHTML = newContent.innerHTML;
   } else {
-    // Fallback avec préservation des scripts
     const scripts = Array.from(document.querySelectorAll("script[src]"));
     document.body.innerHTML = doc.body.innerHTML;
-
-    // Re-ajout des scripts externes si nécessaire
     scripts.forEach((script) => {
       if (!document.querySelector(`script[src="${script.src}"]`)) {
         document.head.appendChild(script.cloneNode(true));
@@ -962,23 +765,16 @@ function updateContent(doc) {
   }
 
   document.title = doc.title;
-
-  // Réinitialisation optimisée
-  resetPageTheme(doc);
   resetWebflow();
 
-  // Réinitialisation des composants avec cleanup
   if (AppState.menu?.cleanup) {
     AppState.menu.cleanup();
   }
   AppState.menu = initMenu();
 
-  const videoPlayer = initVideoPlayer();
-  AppState.videoPlayer = videoPlayer;
-
+  AppState.videoPlayer = initVideoPlayer();
   initScrollSmoother();
 
-  // Scroll optimisé
   if (smoother) {
     smoother.scrollTo(0, false);
   } else {
@@ -988,100 +784,10 @@ function updateContent(doc) {
   highlightCurrentPageDot();
 }
 
-// FONCTION RESETPAGETHEME OPTIMISÉE
-function resetPageTheme(doc) {
-  const newHtml = doc.querySelector("html");
-  const newBody = doc.querySelector("body");
-  const currentHtml = document.documentElement;
-  const currentBody = document.body;
-
-  // Optimisation: traitement par batch des changements de style
-  const updates = [];
-
-  if (newHtml && currentHtml) {
-    if (newHtml.className !== currentHtml.className) {
-      updates.push(() => (currentHtml.className = newHtml.className));
-    }
-
-    const newStyle = newHtml.getAttribute("style");
-    const currentStyle = currentHtml.getAttribute("style");
-
-    if (newStyle !== currentStyle) {
-      updates.push(() => {
-        if (newStyle) {
-          currentHtml.setAttribute("style", newStyle);
-        } else {
-          currentHtml.removeAttribute("style");
-        }
-      });
-    }
-  }
-
-  if (newBody && currentBody) {
-    if (newBody.className !== currentBody.className) {
-      updates.push(() => (currentBody.className = newBody.className));
-    }
-
-    const newBodyStyle = newBody.getAttribute("style");
-    const currentBodyStyle = currentBody.getAttribute("style");
-
-    if (newBodyStyle !== currentBodyStyle) {
-      updates.push(() => {
-        if (newBodyStyle) {
-          currentBody.setAttribute("style", newBodyStyle);
-        } else {
-          currentBody.removeAttribute("style");
-        }
-      });
-    }
-  }
-
-  // Gestion optimisée des styles CSS variables
-  const newVariableStyles = Array.from(
-    doc.querySelectorAll("head style")
-  ).filter((style) => style.textContent.includes("--_colors"));
-
-  const currentVariableStyles = Array.from(
-    document.querySelectorAll("head style")
-  ).filter((style) => style.textContent.includes("--_colors"));
-
-  if (newVariableStyles.length > 0 || currentVariableStyles.length > 0) {
-    updates.push(() => {
-      // Suppression des anciens styles
-      currentVariableStyles.forEach((style) => style.remove());
-
-      // Ajout des nouveaux styles
-      const fragment = document.createDocumentFragment();
-      newVariableStyles.forEach((style) => {
-        const newStyle = document.createElement("style");
-        newStyle.textContent = style.textContent;
-        fragment.appendChild(newStyle);
-      });
-
-      if (fragment.children.length > 0) {
-        document.head.appendChild(fragment);
-      }
-    });
-  }
-
-  // Application de tous les changements en une fois
-  if (updates.length > 0) {
-    requestAnimationFrame(() => {
-      updates.forEach((update) => update());
-      // Force un seul repaint à la fin
-      document.body.offsetHeight;
-    });
-  }
-}
-
 let AppState = {};
 
-// FONCTION HANDLERESIZE OPTIMISÉE AVEC DEBOUNCE AMÉLIORÉ
 function handleResize() {
-  // Cache des dimensions pour éviter les re-calculs
-  const { innerWidth, innerHeight } = window;
-
-  // Optimisation: éviter les animations coûteuses sur resize rapide
+  const { innerWidth } = window;
   if (AppState.resizeAnimationFrame) {
     cancelAnimationFrame(AppState.resizeAnimationFrame);
   }
@@ -1089,17 +795,12 @@ function handleResize() {
   AppState.resizeAnimationFrame = requestAnimationFrame(() => {
     try {
       manageCardHoverAnimations();
-
-      // Fermeture optimisée du menu sur mobile
       if (innerWidth > 568 && AppState.menu?.isMenuOpen()) {
         AppState.menu.closeMenu(true);
       }
-
-      // Refresh différé pour éviter les calculs multiples
       if (AppState.scrollRefreshTimeout) {
         clearTimeout(AppState.scrollRefreshTimeout);
       }
-
       AppState.scrollRefreshTimeout = setTimeout(() => {
         ScrollTrigger.refresh();
       }, 100);
@@ -1111,7 +812,6 @@ function handleResize() {
 
 function initApp() {
   try {
-    // Enregistrement des plugins avec vérification
     const plugins = [
       ScrollTrigger,
       ScrollSmoother,
@@ -1122,46 +822,49 @@ function initApp() {
       Flip,
     ];
     const availablePlugins = plugins.filter((plugin) => plugin);
-
     if (availablePlugins.length > 0) {
       gsap.registerPlugin(...availablePlugins);
     }
 
-    // Initialisation des eases
     EASES.init();
-
-    // Initialisation des composants avec gestion d'erreurs
     AppState.menu = initMenu();
     initScrollSmoother();
     AppState.videoPlayer = initVideoPlayer();
     highlightCurrentPageDot();
     initializePageSetup();
 
-    // Event listeners optimisés avec debounce amélioré
     const debouncedResize = debounce(handleResize, 150, false);
     window.addEventListener("resize", debouncedResize, { passive: true });
 
-    // Navigation API avec gestion améliorée
+    // GESTION DE LA RESTAURATION DEPUIS LE CACHE (BOUTON PRÉCÉDENT)
+    window.addEventListener("pageshow", (event) => {
+      // event.persisted est true si la page est restaurée depuis le back-forward cache (bfcache).
+      if (event.persisted && AppState.menu?.isMenuOpen()) {
+        console.log(
+          "Page restaurée depuis le cache, fermeture instantanée du menu."
+        );
+        // On appelle closeMenu avec le paramètre 'instant' à true.
+        AppState.menu.closeMenu(true);
+      }
+    });
+
     if (window.navigation) {
       window.navigation.addEventListener("navigate", (e) => {
         try {
           const destinationUrl = new URL(e.destination.url);
           const isSameOrigin = location.origin === destinationUrl.origin;
           const isDifferentPage = destinationUrl.href !== location.href;
-
           if (isSameOrigin && isDifferentPage) {
             e.intercept({
               async handler() {
                 try {
                   if (AppState.menu?.isMenuOpen()) {
                     AppState.menu.closeMenu();
-                    // Petit délai pour laisser l'animation se terminer
                     await new Promise((resolve) => setTimeout(resolve, 200));
                   }
                   await loadNewPage(destinationUrl.href, true);
                 } catch (error) {
                   console.error("Navigation intercept error:", error);
-                  // Fallback vers navigation normale
                   window.location.href = destinationUrl.href;
                 }
               },
@@ -1173,12 +876,9 @@ function initApp() {
       });
     }
 
-    // Gestion globale des erreurs
     window.addEventListener("error", (e) => {
       console.error("Uncaught error:", e.error);
     });
-
-    // Gestion des erreurs de promesses non catchées
     window.addEventListener("unhandledrejection", (e) => {
       console.error("Unhandled promise rejection:", e.reason);
     });
