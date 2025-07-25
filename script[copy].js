@@ -467,6 +467,38 @@ function setupHeaderVisibilityObserver() {
   };
 }
 
+// Assurez-vous que EASES.reveal est bien défini quelque part dans votre code
+// si vous continuez à l'utiliser. Sinon, remplacez-le par une ease standard
+// comme "power2.out".
+
+// Assurez-vous que EASES.reveal est bien défini quelque part dans votre code.
+// Sinon, remplacez-le par une ease standard comme "power2.out".
+
+function initHomeHeroAnimations() {
+  const mainCta = document.querySelector(".main-cta");
+
+  // Sécurité : on s'assure que l'élément existe avant de continuer
+  if (!mainCta) {
+    return;
+  }
+
+  // Crée un objet pour tester la media query des écrans larges
+  const mediaQuery = window.matchMedia("(min-width: 1025px)");
+
+  // On vérifie si la condition est remplie AU MOMENT DU CHARGEMENT
+  if (mediaQuery.matches) {
+    // Si l'écran est plus large que 1024px, on lance l'animation
+    gsap.to(mainCta, {
+      y: "0%", // La destination finale
+      duration: 0.75, // La durée de l'animation
+      delay: 0.5, // Le délai avant le début de l'animation
+      ease: EASES.reveal, // Votre "ease" personnalisée
+    });
+  }
+  // Si la condition n'est pas remplie (écran <= 1024px), on ne fait RIEN.
+  // Le CSS s'est déjà chargé de placer le bouton à y: 0%.
+}
+
 function initSplitTextAnimations() {
   if (isTouchMobile) {
     document
@@ -593,29 +625,9 @@ function manageCardHoverAnimations() {
   });
 }
 
-function initHomeHeroAnimations() {
-  const heroPath = document.querySelector(".home-hero_path");
-  const heroText = document.querySelector(".home-hero_text");
-  const mainCta = document.querySelector(".main-cta");
-  if (!heroPath || !heroText) return;
-
-  const timeline = gsap.timeline({ delay: 1.5 });
-  timeline
-    .from(heroPath, {
-      drawSVG: "0%",
-      autoAlpha: 0,
-      duration: 0.75,
-      ease: CustomEase.create("custom", "M0,0 C0.45,0 0,1 1,1"),
-    })
-    .from(
-      heroText,
-      { y: "20%", autoAlpha: 0, duration: 0.75, ease: EASES.reveal },
-      "<0.1"
-    );
-  if (mainCta) {
-    timeline.to(mainCta, { y: "0%", duration: 0.75, ease: EASES.reveal }, "<");
-  }
-}
+// Assurez-vous que EASES.reveal est bien défini quelque part dans votre code
+// si vous continuez à l'utiliser. Sinon, remplacez-le par une ease standard
+// comme "power2.out".
 
 function initLabGallery() {
   const galleryContainer = document.querySelector(".lab-gallery_content");
@@ -724,8 +736,8 @@ function initializePageSetup() {
   setupHeaderVisibilityObserver();
   initSplitTextAnimations();
   manageCardHoverAnimations();
-  initHomeHeroAnimations();
   initLabGallery();
+  initHomeHeroAnimations();
   initializeScrollDependentAnimations();
 }
 
