@@ -1,0 +1,194 @@
+/* ==========================================================================
+   CSS COMPLET - REFORMATÉ ET MODIFIÉ
+   ========================================================================== */
+
+/* --- Styles de base et Prévention du Flicker (MODIFIÉ) --- */
+/*
+ * MODIFICATION : Les éléments du hero ne sont PLUS cachés ici pour votre test.
+ * Seuls les autres éléments qui dépendent d'animations restent masqués.
+ */
+.about-hero_num,
+[data-illustration] {
+  visibility: hidden;
+}
+
+body {
+  font-feature-settings: 'ss07' on;
+}
+
+
+/* --- Animations de traits (Strokes) --- */
+[data-anim-stroke="true"] {
+  --stroke-width: 0%;
+}
+[data-anim-stroke="false"] {
+  --stroke-width: 100%;
+}
+
+/* Styles des lignes/bordures animées */
+.about-hero_content::after,
+.process-item::after,
+.capabilities-head::after,
+.capabilities-list_item::after,
+.capabilities-list_text-wrap::after,
+.home-hero_main::before,
+.project-infos_head::after,
+.project-obj_head::after,
+.project-obj_item::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  height: 1px;
+  background-color: var(--_colors---border--primary);
+  width: var(--stroke-width, 0%);
+}
+
+/* Positionnement des bordures en bas */
+.about-hero_content::after,
+.process-item::after,
+.capabilities-head::after,
+.capabilities-list_item::after,
+.capabilities-list_text-wrap::after,
+.project-infos_head::after,
+.project-obj_head::after,
+.project-obj_item::after {
+  bottom: 0;
+}
+
+/* Positionnement des bordures en haut */
+.home-hero_main::before, {
+  top: 0;
+}
+
+
+/* --- Masque de transition et couleurs de fond --- */
+#mask-bg,
+.cta::after,
+.header-item_dot.active-dot,
+.header_item-link:hover .header-item_dot {
+  background-color: var(--_colors---text--primary);
+}
+#mask-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  width: 100%;
+  height: 100vh;
+  clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%);
+}
+
+
+/* --- Animations des liens (CTA) --- */
+.cta::after, .cta::before,
+.main-cta::after, .main-cta::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0.063rem;
+  background-color: currentColor;
+  transition: transform 735ms cubic-bezier(0.625, 0.05, 0, 1);
+  transform-origin: right;
+}
+
+.cta::before, .cta:hover::after,
+.main-cta::before, .main-cta:hover::after {
+  transform-origin: left;
+  transform: scaleX(1) rotate(0.001deg);
+  transition-delay: 0.3s;
+}
+
+.cta::after, .cta:hover::before,
+.main-cta::after, .main-cta:hover::before {
+  transform-origin: right;
+  transform: scaleX(0) rotate(0.001deg);
+  transition-delay: 0s;
+}
+
+
+/* --- Styles pour le chargement d'images et galeries --- */
+[data-image-loader].is-loaded [data-role="placeholder"] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.lab-gallery_content.gallery-is-ready,
+[data-image-loader] img {
+  opacity: 1;
+}
+[data-image-loader].is-loaded img {
+  opacity: 1;
+  transition: opacity 0.4s 0.1s;
+}
+.lab-gallery_content {
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.lab-gallery_column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--_spacing---space--xsm);
+}
+
+
+/* --- Effets de survol (Hover) --- */
+.footer-item .arrow.is--sm {
+  display: inline-block;
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 0.3s, opacity 0.2s;
+}
+.footer-item:hover .arrow.is--sm {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.footer-item:hover {
+  color: var(--_colors---text--secondary);
+  transition: color 0.2s;
+}
+
+.project-website_url-wrap:hover .project-website_url {
+  text-decoration: underline;
+}
+
+
+/* --- Styles responsives (Fallback pour mobile/tactile) --- */
+@media (max-width: 1023px) and (pointer: coarse) {
+  [data-illustration],
+  [data-prevent-flicker="true"] {
+    visibility: visible !important;
+  }
+  [data-anim-stroke="true"] {
+    --stroke-width: 100% !important;
+  }
+  [data-image-loader] [data-role="placeholder"] {
+    display: none !important;
+  }
+  [data-illustration] {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+  }
+}
+
+/* 
+  1. Style par défaut (pour les écrans <= 1024px)
+  Le bouton est à sa position finale, visible, sans animation.
+*/
+.main-cta {
+  transform: translateY(0%);
+}
+
+/* 
+  2. Style pour les grands écrans (> 1024px)
+  On prépare le bouton pour l'animation en le positionnant en bas.
+  C'est l'état initial avant que GSAP ne prenne le relais.
+*/
+@media (min-width: 1025px) {
+  .main-cta {
+    transform: translateY(200%);
+  }
+}
