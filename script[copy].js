@@ -1,12 +1,9 @@
-// GSAP & Plugins
-// gsap.registerPlugin(ScrollTrigger, ScrollSmoother, CustomEase, SplitText, DrawSVGPlugin, MorphSVGPlugin, Flip);
+// CODE COMPLET AVEC SNAP SUR LES ID commençant par "ideas-"
 
-// DÉFINITION DE LA CONDITION TACTILE MOBILE
 const isTouchMobile =
   window.matchMedia("(max-width: 1023px)").matches &&
   ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
-// Debounce optimisé avec AbortController pour le cleanup
 const debounce = (func, delay, immediate = false) => {
   let timeout;
   const debounced = function executedFunction(...args) {
@@ -23,7 +20,6 @@ const debounce = (func, delay, immediate = false) => {
   return debounced;
 };
 
-// Cache des CustomEase pour éviter les recréations
 const EASES = {
   customInOut: null,
   menuLinkReveal: null,
@@ -51,14 +47,10 @@ function initScrollSmoother() {
   }
 
   if (isTouchMobile) {
-    console.log(
-      "ScrollSmoother et ScrollTrigger désactivés pour les écrans tactiles < 1024px."
-    );
     ScrollTrigger?.disable(true);
     return null;
   }
 
-  console.log("ScrollSmoother activé.");
   smoother = ScrollSmoother.create({
     wrapper: "#smooth-wrapper",
     content: "#smooth-content",
@@ -70,7 +62,6 @@ function initScrollSmoother() {
   return smoother;
 }
 
-// Menu optimisé avec WeakMap pour éviter les fuites mémoire
 const menuElementsCache = new WeakMap();
 const menuCallbacks = new WeakMap();
 
@@ -80,7 +71,6 @@ function initMenu() {
   const backgroundOverlay = document.querySelector(".menu-background-overlay");
 
   if (!menuElement || !triggerElement || !backgroundOverlay) {
-    console.error("Élément de menu, de déclencheur ou de fond manquant.");
     return {
       openMenu: () => {},
       closeMenu: () => {},
@@ -89,7 +79,6 @@ function initMenu() {
     };
   }
 
-  gsap.set(menuElement, { x: "100%" });
   let isMenuOpen = false;
 
   let elements = menuElementsCache.get(menuElement);
@@ -97,9 +86,6 @@ function initMenu() {
     elements = {
       triggerText: document.querySelectorAll(".menu-trigger_text"),
       linkTitles: document.querySelectorAll(".primary-nav_title"),
-      linkNumbers: document.querySelectorAll(".primary-nav_num"),
-      social: document.querySelectorAll(".secondary-nav_title"),
-      label: document.querySelectorAll(".menu-bottom_label"),
     };
     menuElementsCache.set(menuElement, elements);
   }
@@ -115,22 +101,24 @@ function initMenu() {
     .timeline({
       paused: true,
       defaults: { overwrite: "auto" },
-      onStart: () => updateMenuState(true),
+      onStart: () => {
+        updateMenuState(true);
+        gsap.set(menuElement, { pointerEvents: "auto" });
+      },
     })
-    .to(menuElement, { x: "0%", duration: 0.6, ease: EASES.reveal })
+    .to(menuElement, {
+      clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+      duration: 0.6,
+      ease: EASES.reveal,
+    })
     .to(backgroundOverlay, { opacity: 0.4, duration: 0.6 }, "<")
     .to(
       elements.triggerText,
-      { y: "-100%", duration: 0.5, ease: EASES.menuLinkReveal },
+      { y: "-200%", duration: 0.5, ease: EASES.menuLinkReveal },
       "<"
     )
     .fromTo(
-      [
-        ...elements.linkTitles,
-        ...elements.linkNumbers,
-        ...elements.social,
-        ...elements.label,
-      ],
+      elements.linkTitles,
       { y: "200%" },
       { y: "0%", duration: 0.5, stagger: 0.05, ease: EASES.menuLinkReveal },
       "<0.2"
@@ -140,9 +128,16 @@ function initMenu() {
     .timeline({
       paused: true,
       defaults: { overwrite: "auto" },
-      onStart: () => updateMenuState(false),
+      onComplete: () => {
+        updateMenuState(false);
+        gsap.set(menuElement, { pointerEvents: "none" });
+      },
     })
-    .to(menuElement, { x: "100%", duration: 0.4, ease: EASES.reveal })
+    .to(menuElement, {
+      clipPath: "polygon(100% 0%, 100% 0%, 100% 100%, 100% 100%)",
+      duration: 0.4,
+      ease: EASES.reveal,
+    })
     .to(backgroundOverlay, { opacity: 0, duration: 0.4 }, "<")
     .to(
       elements.triggerText,
@@ -161,14 +156,15 @@ function initMenu() {
     openTimeline.pause();
 
     if (instant) {
-      // Fermeture instantanée sans animation via gsap.set()
       updateMenuState(false);
-      gsap.set(menuElement, { x: "100%" });
+      gsap.set(menuElement, {
+        clipPath: "polygon(100% 0%, 100% 0%, 100% 100%, 100% 100%)",
+        pointerEvents: "none",
+      });
       gsap.set(backgroundOverlay, { opacity: 0 });
       gsap.set(elements.triggerText, { y: "0%" });
-      closeTimeline.pause(0); // Réinitialise la timeline au cas où
+      closeTimeline.pause(0);
     } else {
-      // Fermeture avec animation (comportement normal)
       closeTimeline.restart();
     }
   };
@@ -214,9 +210,7 @@ function resetWebflow() {
     window.Webflow?.destroy();
     window.Webflow?.ready();
     window.Webflow?.require("ix2")?.init();
-  } catch (error) {
-    console.error("Webflow reset error:", error);
-  }
+  } catch (error) {}
 }
 
 function initVideoPlayer() {
@@ -328,7 +322,6 @@ function initVideoPlayer() {
         await elements.video.play();
       }
     } catch (error) {
-      console.error("Erreur lors de la lecture de la vidéo:", error);
       updatePlayerState(false);
     }
   };
@@ -398,25 +391,17 @@ function initVideoPlayer() {
   };
 }
 
-function highlightCurrentPageDot() {
-  const pageName =
-    window.location.pathname.split("/").pop().replace(".html", "") ||
-    "home_page_no_dot";
-  const dots = document.querySelectorAll(".header-item_dot");
-  dots.forEach((dot) => dot.classList.remove("active-dot"));
-
-  if (["projects", "about", "lab"].includes(pageName)) {
-    const targetDot = document.getElementById(`${pageName}-dot`);
-    targetDot?.classList.add("active-dot");
-  }
-}
-
 function initHeaderAnimation() {
   const logo = document.querySelector(".header-logo");
+  const availability = document.querySelector(".header-availability");
   const navItems = gsap.utils.toArray(".header_list-item");
-  if (!logo && navItems.length === 0) return;
 
-  gsap.set([logo, ...navItems], { clearProps: "all" });
+  const allElements = [logo, availability, ...navItems].filter(Boolean);
+
+  if (allElements.length === 0) return;
+
+  gsap.set(allElements, { clearProps: "all" });
+
   const timeline = gsap.timeline({
     defaults: { overwrite: "auto", ease: EASES.reveal },
   });
@@ -426,12 +411,17 @@ function initHeaderAnimation() {
     timeline.to(logo, { y: "0%", duration: 0.5 });
   }
 
+  if (availability) {
+    gsap.set(availability, { y: "200%" });
+    timeline.to(availability, { y: "0%", duration: 0.5 }, logo ? "<0.2" : 0);
+  }
+
   if (navItems.length > 0) {
     gsap.set(navItems, { y: "200%" });
     timeline.to(
       navItems,
       { y: "0%", duration: 0.5, stagger: 0.1 },
-      logo ? "<0.2" : 0
+      availability ? "<0.1" : logo ? "<0.2" : 0
     );
   }
 }
@@ -467,36 +457,20 @@ function setupHeaderVisibilityObserver() {
   };
 }
 
-// Assurez-vous que EASES.reveal est bien défini quelque part dans votre code
-// si vous continuez à l'utiliser. Sinon, remplacez-le par une ease standard
-// comme "power2.out".
-
-// Assurez-vous que EASES.reveal est bien défini quelque part dans votre code.
-// Sinon, remplacez-le par une ease standard comme "power2.out".
-
 function initHomeHeroAnimations() {
   const mainCta = document.querySelector(".main-cta");
-
-  // Sécurité : on s'assure que l'élément existe avant de continuer
   if (!mainCta) {
     return;
   }
-
-  // Crée un objet pour tester la media query des écrans larges
   const mediaQuery = window.matchMedia("(min-width: 1025px)");
-
-  // On vérifie si la condition est remplie AU MOMENT DU CHARGEMENT
   if (mediaQuery.matches) {
-    // Si l'écran est plus large que 1024px, on lance l'animation
     gsap.to(mainCta, {
-      y: "0%", // La destination finale
-      duration: 0.75, // La durée de l'animation
-      delay: 0.5, // Le délai avant le début de l'animation
-      ease: EASES.reveal, // Votre "ease" personnalisée
+      y: "0%",
+      duration: 0.75,
+      delay: 0.5,
+      ease: EASES.reveal,
     });
   }
-  // Si la condition n'est pas remplie (écran <= 1024px), on ne fait RIEN.
-  // Le CSS s'est déjà chargé de placer le bouton à y: 0%.
 }
 
 function initSplitTextAnimations() {
@@ -584,9 +558,7 @@ function initSplitTextAnimations() {
                   }),
                     gsap.set(e, { visibility: "visible" }),
                     e.setAttribute("data-split-processed", "true");
-                } catch (e) {
-                  console.error("Erreur lors de la création de SplitText:", e);
-                }
+                } catch (e) {}
             }),
             ScrollTrigger.refresh(),
             e();
@@ -595,101 +567,9 @@ function initSplitTextAnimations() {
   });
 }
 
-function manageCardHoverAnimations() {
-  gsap.utils.toArray(".home-work_card-visual").forEach((t) => {
-    t._hoverTimeline?.kill();
-    t.removeEventListener("mouseenter", t._mouseEnterHandler);
-    t.removeEventListener("mouseleave", t._mouseLeaveHandler);
-    const o = t.querySelector(".card-label_path"),
-      n = t.querySelector(".card-label_text");
-    if (!o || !n) return;
-    gsap.set(n, { opacity: 0, y: "20%" });
-    gsap.set(o, { drawSVG: "0%" });
-    const e = gsap
-      .timeline({ paused: !0 })
-      .to(o, {
-        drawSVG: "100%",
-        duration: 0.75,
-        ease: CustomEase.create("custom", "M0,0 C0.45,0 0,1 1,1"),
-      })
-      .to(
-        n,
-        { opacity: 1, y: "0%", duration: 0.3, ease: EASES.reveal },
-        "<0.2"
-      );
-    t._hoverTimeline = e;
-    t._mouseEnterHandler = () => e.play();
-    t._mouseLeaveHandler = () => e.reverse();
-    t.addEventListener("mouseenter", t._mouseEnterHandler);
-    t.addEventListener("mouseleave", t._mouseLeaveHandler);
-  });
-}
-
-// Assurez-vous que EASES.reveal est bien défini quelque part dans votre code
-// si vous continuez à l'utiliser. Sinon, remplacez-le par une ease standard
-// comme "power2.out".
-
-function initLabGallery() {
-  const galleryContainer = document.querySelector(".lab-gallery_content");
-  if (!galleryContainer) return;
-
-  const gridItems = Array.from(
-    galleryContainer.querySelectorAll(".lab-grid_item")
-  );
-  if (gridItems.length === 0) return;
-
-  const buildColumns = () => {
-    const computedStyles = getComputedStyle(galleryContainer);
-    const numColumns = computedStyles
-      .getPropertyValue("grid-template-columns")
-      .split(" ")
-      .filter((val) => val && val !== "0px").length;
-    if (numColumns === 0) return;
-
-    const { rowGap, columnGap } = computedStyles;
-    const columnsData = Array.from({ length: numColumns }, () => []);
-    gridItems.forEach((item, index) => {
-      columnsData[index % numColumns].push(item);
-    });
-
-    const fragment = document.createDocumentFragment();
-    const centerIndex = (numColumns - 1) / 2;
-    const smootherEffects = [];
-
-    columnsData.forEach((items, index) => {
-      const column = document.createElement("div");
-      column.className = "lab-gallery_column";
-      column.style.cssText = `display: flex; flex-direction: column; gap: ${rowGap}`;
-      items.forEach((item) => column.appendChild(item));
-      fragment.appendChild(column);
-      const lag = 0.05 * Math.abs(index - centerIndex);
-      smootherEffects.push({ element: column, lag });
-    });
-
-    galleryContainer.innerHTML = "";
-    galleryContainer.appendChild(fragment);
-    galleryContainer.style.cssText = `display: flex; gap: ${columnGap}`;
-
-    if (smoother) {
-      smootherEffects.forEach(({ element, lag }) => {
-        smoother.effects(element, { speed: 1, lag });
-      });
-    }
-    galleryContainer.classList.add("gallery-is-ready");
-  };
-
-  document.fonts.ready.then(() => {
-    setTimeout(buildColumns, 50);
-  });
-}
-
 function initializeScrollDependentAnimations() {
   if (isTouchMobile) {
     gsap.set('[data-anim-stroke="true"]', { "--stroke-width": "100%" });
-    gsap.set("[data-illustration]", { y: "0%", autoAlpha: 1 });
-    document
-      .querySelectorAll("[data-image-loader]")
-      .forEach((loader) => loader.classList.add("is-loaded"));
     return;
   }
 
@@ -703,42 +583,65 @@ function initializeScrollDependentAnimations() {
         stagger: 0.2,
       }),
   });
+}
 
-  gsap.utils.toArray("[data-illustration]").forEach((el) => {
-    gsap.from(el, {
-      y: "200%",
-      autoAlpha: 0,
-      duration: 0.5,
-      ease: EASES.reveal,
-      scrollTrigger: { trigger: el, start: "top 85%", once: true },
-    });
-  });
+function updateActiveNavLink() {
+  const currentPathname = window.location.pathname;
+  const navLinks = document.querySelectorAll(".header_item-link");
 
-  document.querySelectorAll("[data-image-loader]").forEach((loader) => {
-    const img = loader.querySelector("img");
-    if (!img) return;
-    const showImage = () =>
-      !loader.classList.contains("is-loaded") &&
-      loader.classList.add("is-loaded");
-    ScrollTrigger.create({
-      trigger: loader,
-      start: "top 85%",
-      once: true,
-      onEnter: () =>
-        img.complete
-          ? showImage()
-          : img.addEventListener("load", showImage, { once: true }),
-    });
+  navLinks.forEach((link) => {
+    const linkPathname = new URL(link.href).pathname;
+    link.classList.remove("is-current");
+    if (linkPathname === currentPathname) {
+      link.classList.add("is-current");
+    }
   });
 }
 
 function initializePageSetup() {
   setupHeaderVisibilityObserver();
   initSplitTextAnimations();
-  manageCardHoverAnimations();
-  initLabGallery();
   initHomeHeroAnimations();
   initializeScrollDependentAnimations();
+
+  // --- DÉBUT DE LA LOGIQUE POUR L'ANIMATION SUR "COUP DE SCROLL" ---
+
+  if (!isTouchMobile) {
+    const leftBracket = document.querySelector(".ideas-bracket.is--left");
+    const rightBracket = document.querySelector(".ideas-bracket.is--right");
+
+    if (leftBracket && rightBracket) {
+      let isAnimating = false;
+
+      const bracketTimeline = gsap.timeline({
+        paused: true,
+        onComplete: () => {
+          isAnimating = false;
+        },
+      });
+
+      const duration = 0.4;
+      const ease = "power4.inOut";
+
+      bracketTimeline
+        .to(leftBracket, { xPercent: 100, duration, ease })
+        .to(rightBracket, { xPercent: -100, duration, ease }, "<")
+        .to(leftBracket, { xPercent: 0, duration, ease })
+        .to(rightBracket, { xPercent: 0, duration, ease }, "<");
+
+      Observer.create({
+        target: window,
+        type: "wheel,touch",
+        onWheel: () => {
+          if (!isAnimating) {
+            isAnimating = true;
+            bracketTimeline.restart();
+          }
+        },
+      });
+    }
+  }
+  // --- FIN DE LA LOGIQUE ---
 }
 
 async function loadNewPage(url, useTransition = false) {
@@ -755,12 +658,12 @@ async function loadNewPage(url, useTransition = false) {
       update();
     }
     initializePageSetup();
-  } catch (error) {
-    console.error("Error loading new page:", error);
-  }
+  } catch (error) {}
 }
 
 function updateContent(doc) {
+  ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+
   const newContent = doc.querySelector("#main-content");
   const oldContent = document.querySelector("#main-content");
 
@@ -792,8 +695,7 @@ function updateContent(doc) {
   } else {
     window.scrollTo({ top: 0, behavior: "instant" });
   }
-
-  highlightCurrentPageDot();
+  updateActiveNavLink();
 }
 
 let AppState = {};
@@ -806,7 +708,6 @@ function handleResize() {
 
   AppState.resizeAnimationFrame = requestAnimationFrame(() => {
     try {
-      manageCardHoverAnimations();
       if (innerWidth > 568 && AppState.menu?.isMenuOpen()) {
         AppState.menu.closeMenu(true);
       }
@@ -816,9 +717,7 @@ function handleResize() {
       AppState.scrollRefreshTimeout = setTimeout(() => {
         ScrollTrigger.refresh();
       }, 100);
-    } catch (error) {
-      console.error("Error in resize handler:", error);
-    }
+    } catch (error) {}
   });
 }
 
@@ -832,6 +731,7 @@ function initApp() {
       DrawSVGPlugin,
       MorphSVGPlugin,
       Flip,
+      Observer, // PLUGIN AJOUTÉ
     ];
     const availablePlugins = plugins.filter((plugin) => plugin);
     if (availablePlugins.length > 0) {
@@ -842,20 +742,14 @@ function initApp() {
     AppState.menu = initMenu();
     initScrollSmoother();
     AppState.videoPlayer = initVideoPlayer();
-    highlightCurrentPageDot();
+    updateActiveNavLink();
     initializePageSetup();
 
     const debouncedResize = debounce(handleResize, 150, false);
     window.addEventListener("resize", debouncedResize, { passive: true });
 
-    // GESTION DE LA RESTAURATION DEPUIS LE CACHE (BOUTON PRÉCÉDENT)
     window.addEventListener("pageshow", (event) => {
-      // event.persisted est true si la page est restaurée depuis le back-forward cache (bfcache).
       if (event.persisted && AppState.menu?.isMenuOpen()) {
-        console.log(
-          "Page restaurée depuis le cache, fermeture instantanée du menu."
-        );
-        // On appelle closeMenu avec le paramètre 'instant' à true.
         AppState.menu.closeMenu(true);
       }
     });
@@ -876,27 +770,18 @@ function initApp() {
                   }
                   await loadNewPage(destinationUrl.href, true);
                 } catch (error) {
-                  console.error("Navigation intercept error:", error);
                   window.location.href = destinationUrl.href;
                 }
               },
             });
           }
-        } catch (error) {
-          console.error("Navigation error:", error);
-        }
+        } catch (error) {}
       });
     }
 
-    window.addEventListener("error", (e) => {
-      console.error("Uncaught error:", e.error);
-    });
-    window.addEventListener("unhandledrejection", (e) => {
-      console.error("Unhandled promise rejection:", e.reason);
-    });
-  } catch (error) {
-    console.error("Critical error during app initialization:", error);
-  }
+    window.addEventListener("error", (e) => {});
+    window.addEventListener("unhandledrejection", (e) => {});
+  } catch (error) {}
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
