@@ -38,12 +38,18 @@ const EASES = {
   },
 };
 
-let smoother;
+const AppState = {
+  menu: null,
+  videoPlayer: null,
+  smoother: null,
+  resizeAnimationFrame: null,
+  scrollRefreshTimeout: null,
+};
 
 function initScrollSmoother() {
-  if (smoother) {
-    smoother.kill();
-    smoother = null;
+  if (AppState.smoother) {
+    AppState.smoother.kill();
+    AppState.smoother = null;
   }
 
   if (isTouchMobile) {
@@ -51,7 +57,7 @@ function initScrollSmoother() {
     return null;
   }
 
-  smoother = ScrollSmoother.create({
+  AppState.smoother = ScrollSmoother.create({
     wrapper: "#smooth-wrapper",
     content: "#smooth-content",
     smooth: 1.2,
@@ -59,7 +65,7 @@ function initScrollSmoother() {
     speed: 1.2,
     normalizeScroll: true,
   });
-  return smoother;
+  return AppState.smoother;
 }
 
 const menuElementsCache = new WeakMap();
@@ -210,7 +216,9 @@ function resetWebflow() {
     window.Webflow?.destroy();
     window.Webflow?.ready();
     window.Webflow?.require("ix2")?.init();
-  } catch (error) {}
+  } catch (error) {
+    console.error("Failed to reset Webflow:", error);
+  }
 }
 
 function initVideoPlayer() {
@@ -322,6 +330,7 @@ function initVideoPlayer() {
         await elements.video.play();
       }
     } catch (error) {
+      console.error("Video playback failed:", error);
       updatePlayerState(false);
     }
   };
@@ -458,16 +467,21 @@ function setupHeaderVisibilityObserver() {
 }
 
 function initHomeHeroAnimations() {
-  const mainCta = document.querySelector(".main-cta");
-  if (!mainCta) {
+  const mediaQuery = window.matchMedia("(min-width: 1025px)");
+  if (!mediaQuery.matches) {
     return;
   }
-  const mediaQuery = window.matchMedia("(min-width: 1025px)");
-  if (mediaQuery.matches) {
-    gsap.to(mainCta, {
+
+  const animatedElements = document.querySelectorAll(
+    ".main-cta, .home-hero_country"
+  );
+
+  if (animatedElements.length > 0) {
+    gsap.to(animatedElements, {
       y: "0%",
       duration: 0.75,
-      delay: 0.5,
+      delay: 0.3,
+      stagger: 0.2,
       ease: EASES.reveal,
     });
   }
@@ -591,10 +605,7 @@ function updateActiveNavLink() {
 
   navLinks.forEach((link) => {
     const linkPathname = new URL(link.href).pathname;
-    link.classList.remove("is-current");
-    if (linkPathname === currentPathname) {
-      link.classList.add("is-current");
-    }
+    link.classList.toggle("is-current", linkPathname === currentPathname);
   });
 }
 
@@ -604,61 +615,79 @@ function initializePageSetup() {
   initHomeHeroAnimations();
   initializeScrollDependentAnimations();
 
-  // --- DÉBUT DE LA LOGIQUE POUR L'ANIMATION SUR "COUP DE SCROLL" ---
+  if (isTouchMobile) return;
 
-  if (!isTouchMobile) {
-    const leftBracket = document.querySelector(".ideas-bracket.is--left");
-    const rightBracket = document.querySelector(".ideas-bracket.is--right");
+  const leftBracket = document.querySelector(".ideas-bracket.is--left");
+  const rightBracket = document.querySelector(".ideas-bracket.is--right");
 
-    if (leftBracket && rightBracket) {
-      let isAnimating = false;
+  if (leftBracket && rightBracket) {
+    let isAnimating = false;
 
-      const bracketTimeline = gsap.timeline({
+    const bracketTimeline = gsap
+      .timeline({
         paused: true,
         onComplete: () => {
           isAnimating = false;
         },
+      })
+      .to([leftBracket, rightBracket], {
+        xPercent: (i) => (i === 0 ? 20 : -20),
+        duration: 0.4,
+        ease: "power2.inOut",
+      })
+      .to([leftBracket, rightBracket], {
+        xPercent: 0,
+        duration: 0.4,
+        ease: "power2.inOut",
       });
 
-      const duration = 0.4;
-      const ease = "power4.inOut";
-
-      bracketTimeline
-        .to(leftBracket, { xPercent: 100, duration, ease })
-        .to(rightBracket, { xPercent: -100, duration, ease }, "<")
-        .to(leftBracket, { xPercent: 0, duration, ease })
-        .to(rightBracket, { xPercent: 0, duration, ease }, "<");
-
-      Observer.create({
-        target: window,
-        type: "wheel,touch",
-        onWheel: () => {
+    Observer.create({
+      target: window,
+      type: "wheel,touch",
+      onWheel: debounce(
+        () => {
           if (!isAnimating) {
             isAnimating = true;
             bracketTimeline.restart();
           }
         },
-      });
-    }
+        50,
+        true
+      ),
+    });
   }
-  // --- FIN DE LA LOGIQUE ---
+}
+
+function animateNewPage(delay = 0) {
+  if (delay > 0) {
+    gsap.delayedCall(delay / 220, initializePageSetup);
+  } else {
+    initializePageSetup();
+  }
 }
 
 async function loadNewPage(url, useTransition = false) {
   try {
     const response = await fetch(url);
-    if (!response.ok) throw new Error("Network response was not ok");
+    if (!response.ok)
+      throw new Error(`Network response was not ok: ${response.statusText}`);
     const text = await response.text();
     const doc = new DOMParser().parseFromString(text, "text/html");
+
     const update = () => updateContent(doc);
 
     if (useTransition && document.startViewTransition) {
-      await document.startViewTransition(update).finished;
+      const transition = document.startViewTransition(update);
+      await transition.ready;
+      animateNewPage(200);
     } else {
       update();
+      animateNewPage(0);
     }
-    initializePageSetup();
-  } catch (error) {}
+  } catch (error) {
+    console.error("Failed to load new page:", error);
+    window.location.href = url;
+  }
 }
 
 function updateContent(doc) {
@@ -670,45 +699,37 @@ function updateContent(doc) {
   if (newContent && oldContent) {
     oldContent.innerHTML = newContent.innerHTML;
   } else {
-    const scripts = Array.from(document.querySelectorAll("script[src]"));
     document.body.innerHTML = doc.body.innerHTML;
-    scripts.forEach((script) => {
-      if (!document.querySelector(`script[src="${script.src}"]`)) {
-        document.head.appendChild(script.cloneNode(true));
-      }
-    });
   }
 
   document.title = doc.title;
   resetWebflow();
 
-  if (AppState.menu?.cleanup) {
-    AppState.menu.cleanup();
-  }
+  AppState.menu?.cleanup();
   AppState.menu = initMenu();
 
+  AppState.videoPlayer?.cleanup();
   AppState.videoPlayer = initVideoPlayer();
+
   initScrollSmoother();
 
-  if (smoother) {
-    smoother.scrollTo(0, false);
+  if (AppState.smoother) {
+    AppState.smoother.scrollTo(0, false);
   } else {
     window.scrollTo({ top: 0, behavior: "instant" });
   }
+
   updateActiveNavLink();
 }
 
-let AppState = {};
-
 function handleResize() {
-  const { innerWidth } = window;
   if (AppState.resizeAnimationFrame) {
     cancelAnimationFrame(AppState.resizeAnimationFrame);
   }
 
   AppState.resizeAnimationFrame = requestAnimationFrame(() => {
     try {
-      if (innerWidth > 568 && AppState.menu?.isMenuOpen()) {
+      if (window.innerWidth > 568 && AppState.menu?.isMenuOpen()) {
         AppState.menu.closeMenu(true);
       }
       if (AppState.scrollRefreshTimeout) {
@@ -716,8 +737,10 @@ function handleResize() {
       }
       AppState.scrollRefreshTimeout = setTimeout(() => {
         ScrollTrigger.refresh();
-      }, 100);
-    } catch (error) {}
+      }, 250);
+    } catch (error) {
+      console.error("Error during resize handling:", error);
+    }
   });
 }
 
@@ -731,12 +754,9 @@ function initApp() {
       DrawSVGPlugin,
       MorphSVGPlugin,
       Flip,
-      Observer, // PLUGIN AJOUTÉ
+      Observer,
     ];
-    const availablePlugins = plugins.filter((plugin) => plugin);
-    if (availablePlugins.length > 0) {
-      gsap.registerPlugin(...availablePlugins);
-    }
+    gsap.registerPlugin(...plugins.filter(Boolean));
 
     EASES.init();
     AppState.menu = initMenu();
@@ -766,22 +786,30 @@ function initApp() {
                 try {
                   if (AppState.menu?.isMenuOpen()) {
                     AppState.menu.closeMenu();
-                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    await new Promise((resolve) => setTimeout(resolve, 400));
                   }
                   await loadNewPage(destinationUrl.href, true);
                 } catch (error) {
-                  window.location.href = destinationUrl.href;
+                  e.destination.navigate();
                 }
               },
             });
           }
-        } catch (error) {}
+        } catch (error) {
+          console.error("Navigation intercept error:", error);
+        }
       });
     }
 
-    window.addEventListener("error", (e) => {});
-    window.addEventListener("unhandledrejection", (e) => {});
-  } catch (error) {}
+    window.addEventListener("error", (e) => {
+      console.error("Global error caught:", e.error);
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      console.warn("Unhandled promise rejection:", e.reason);
+    });
+  } catch (error) {
+    console.error("Failed to initialize app:", error);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", initApp);
